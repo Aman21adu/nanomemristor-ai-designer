@@ -1,0 +1,38 @@
+# Python virtual environment
+memristor_env/
+venv/
+.env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Archived project versions
+archive_v1/
+archive_v2/
+
+# Downloaded research papers
+literature/
+*.pdf
+
+# Trained model weights / binary checkpoints
+*.pt
+*.pth
+*.ckpt
+
+# Temporary files
+*.tmp
+*.log
+
+.streamlit/secrets.toml
+data/MNIST/

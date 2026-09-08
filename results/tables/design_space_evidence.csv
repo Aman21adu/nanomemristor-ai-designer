@@ -1,0 +1,10 @@
+evidence_id,metric_category,metric_name,value,unit,interpretation
+DESIGN_PARAMETER_COUNT,DESIGN_SPACE_STRUCTURE,Independent accelerator design parameters,3.0,parameters,"The current search varies crossbar size, requested weight precision and ADC precision."
+CROSSBAR_CHOICES,DESIGN_SPACE_STRUCTURE,Crossbar-size choices,5.0,choices,"[16, 32, 64, 128, 256]"
+WEIGHT_PRECISION_CHOICES,DESIGN_SPACE_STRUCTURE,Requested weight-precision choices,7.0,choices,"[2, 3, 4, 5, 6, 7, 8]"
+ADC_PRECISION_CHOICES,DESIGN_SPACE_STRUCTURE,ADC-precision choices,7.0,choices,"[4, 5, 6, 7, 8, 9, 10]"
+CONFIGURATIONS_PER_DEVICE,DESIGN_SPACE_SIZE,Requested configurations per device,245.0,configurations,5 crossbar choices x 7 weight choices x 7 ADC choices.
+TOTAL_SIMULATION_ROWS,DESIGN_SPACE_SIZE,Current device-configuration simulation rows,980.0,rows,4 physical devices x 245 configurations per device.
+EXPANSION_FROM_ORIGINAL,DESIGN_SPACE_GROWTH,Growth versus original 27-case space,9.074074074074074,times,27 -> 245 configurations per device.
+EXPANSION_FROM_V2,DESIGN_SPACE_GROWTH,Growth versus V2 64-case space,3.828125,times,64 -> 245 configurations per device.
+COST_AWARE_MEAN_REGRET,DESIGN_SPACE_USEFULNESS,Mean regret of exhaustive cost-aware selections,0.3900000000000041,percentage_points,The expanded space supports selection of lower-cost configurations while remaining within the defined 0.5 percentage-point near-optimal accuracy region.

@@ -1,0 +1,54 @@
+{
+    "dataset_file": "results/tables/ml_dataset.csv",
+    "rows": 980,
+    "devices": 4,
+    "configurations_per_device": 245,
+    "configuration_space_source": "src/config_space.py",
+    "group_holdout_column": "device_id",
+    "group_columns": [
+        "device_id"
+    ],
+    "provenance_columns": [
+        "technology_family"
+    ],
+    "device_model_features": [
+        "device_on_off_ratio",
+        "device_log10_on_off_ratio",
+        "state_count_available",
+        "physical_state_count",
+        "device_conductance_mode",
+        "device_state_count_status",
+        "parameter_source"
+    ],
+    "configuration_model_features": [
+        "mapping_strategy",
+        "precision_basis",
+        "crossbar_size",
+        "requested_weight_bits",
+        "effective_weight_levels",
+        "slices_per_branch",
+        "physical_cells_per_weight",
+        "adc_bits"
+    ],
+    "cost_columns": [
+        "estimated_memristor_cells",
+        "estimated_physical_crossbar_tiles",
+        "adc_levels",
+        "relative_hardware_cost_proxy"
+    ],
+    "target_columns": [
+        "accuracy",
+        "accuracy_loss"
+    ],
+    "recommended_target": "accuracy",
+    "split_rule": "LEAVE_ONE_DEVICE_OUT; NEVER_RANDOM_ROW_SPLIT",
+    "important_notes": [
+        "device_id must be used only for grouping and held-out evaluation, not as a model feature.",
+        "technology_family is retained for provenance and reporting.",
+        "The configuration count is read dynamically from src/config_space.py.",
+        "physical_state_count=0 means no fixed physical state count is available; consult state_count_available.",
+        "effective_weight_levels describes accelerator mapping precision, not necessarily the physical state count of one memristor.",
+        "relative_hardware_cost_proxy is heuristic and must not be reported as measured energy, power, latency, or silicon area.",
+        "With only four physical device profiles, this dataset is suitable for pipeline testing but not yet for strong generalization claims."
+    ]
+}

@@ -1,0 +1,103 @@
+NANO-DEVICE TO ACCELERATOR EVIDENCE SUMMARY
+==========================================
+
+CURRENT SCIENTIFIC POSITION
+---------------------------
+
+The current simulator is device-electrical-behavior-aware.
+It is not yet a complete material-to-device physics simulator.
+
+Literature-derived memristor electrical characteristics constrain how neural-network weights are represented and how crossbar currents are quantized.
+
+1. ABSOLUTE CONDUCTANCE SCALE
+-----------------------------
+
+Controlled experiment: Gmin and Gmax were multiplied by the same factor while the ON/OFF ratio was preserved.
+
+Tested 28 cases across 4 devices.
+Scale range: 0.001x to 1000x.
+Passed cases: 28/28.
+Maximum numerical output difference: 5.364e-07.
+
+Interpretation: absolute conductance magnitude is effectively normalized away by the current simulator when the ON/OFF ratio is unchanged.
+
+This is a CURRENT MODEL LIMITATION, not a claim about real hardware.
+
+Real arrays can depend on absolute conductance through IR drop, line resistance, current magnitude, power, sensing limits and heating.
+
+2. ON/OFF RATIO EFFECT
+----------------------
+
+Controlled experiment: only the ON/OFF conductance ratio was changed while network, crossbar size, weight precision, ADC precision, mapping mode and dataset were held fixed.
+
+ZnO_01:
+  ADC 4: ratio 2 -> 3000, accuracy 92.82% -> 95.91% (+3.09 pp).
+  ADC 6: ratio 2 -> 3000, accuracy 95.91% -> 96.07% (+0.16 pp).
+
+TaOx_01:
+  ADC 4: ratio 2 -> 3000, accuracy 67.98% -> 94.47% (+26.49 pp).
+  ADC 6: ratio 2 -> 3000, accuracy 95.66% -> 95.92% (+0.26 pp).
+
+HfOx_02:
+  ADC 4: ratio 2 -> 3000, accuracy 69.24% -> 94.31% (+25.07 pp).
+  ADC 6: ratio 2 -> 3000, accuracy 95.66% -> 96.00% (+0.34 pp).
+
+Interpretation: ON/OFF ratio is an active device parameter, but its accelerator-level importance depends strongly on ADC precision.
+
+Higher ADC resolution compensates for much of the conductance-window limitation in the present model.
+
+3. PHYSICAL CONDUCTANCE-STATE CAPABILITY
+----------------------------------------
+
+Controlled experiment: physical conductance-state count was varied while ON/OFF ratio, ADC precision, weight precision, crossbar size, network and dataset were fixed.
+
+2 physical states -> 3 effective signed weight levels -> 11.27% accuracy.
+16 physical states -> 15 effective signed weight levels -> 96.02% accuracy.
+
+Accuracy difference: 84.75 percentage points.
+
+For W=4, 8 physical states are sufficient to reach the requested 15 signed levels.
+
+Additional physical states beyond that point do not increase precision in this W=4 mapping.
+
+4. BINARY DEVICE ARCHITECTURE TRADEOFF
+--------------------------------------
+
+A binary memristor still has only two physical states.
+The project does not treat one binary cell as having 15, 63 or 255 physical states.
+
+Higher neural-weight precision is instead created through bit slicing across multiple binary cells.
+
+For W=4: 3 binary slices per differential branch = 6 physical cells per neural-network weight, producing 15 effective signed accelerator levels.
+
+Therefore device technology creates an architecture-level tradeoff: multilevel devices can encode more precision per cell, while binary devices recover precision using additional physical cells.
+
+MENTOR ANSWER: WHAT MAKES THIS NANO?
+-----------------------------------
+
+The nanotechnology contribution is not simply the material name supplied to an AI model.
+
+Literature-derived memristor device characteristics constrain the physical representation of neural weights and therefore change accelerator behavior.
+
+The strongest current evidence is physical conductance-state capability: insufficient states severely reduce effective weight precision and application accuracy.
+
+ON/OFF ratio is also an active device parameter, but its importance interacts strongly with ADC resolution.
+
+That interaction makes this a device-circuit-architecture co-design problem rather than simply an AI model ranking material names.
+
+CURRENT LIMITATION
+------------------
+
+The present simulator starts from device electrical characteristics rather than directly predicting those characteristics from material physics.
+
+The absolute-conductance experiment also shows that absolute conductance magnitude is currently normalized away.
+
+Thickness, crystallite size, material stack, device area, switching mechanism, line resistance, variability, read noise, drift, filament dynamics, switching kinetics, power and heating are not yet fully propagated into accelerator behavior.
+
+Therefore the current claim should be:
+
+"Literature-grounded memristor device-to-accelerator co-design simulator."
+
+Do not yet claim:
+
+"Full material-physics-to-accelerator simulator."

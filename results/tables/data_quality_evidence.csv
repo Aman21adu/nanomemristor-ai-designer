@@ -1,0 +1,12 @@
+evidence_id,metric_category,metric_name,value,unit,interpretation
+DATABASE_PROPERTY_ROWS,DATABASE_SCOPE,Literature property records,100.0,rows,Property-level literature records stored in the traceability database.
+DATABASE_DEVICE_COUNT,DATABASE_SCOPE,Physical devices represented,11.0,devices,Distinct literature devices currently represented.
+PROVENANCE_COMPLETENESS,PROVENANCE,Complete provenance rows,100.0,percent,"100/100 rows contain source title, DOI, page, evidence locator and source note."
+EXPERIMENTAL_ROWS,EVIDENCE_TYPE,Experimental records,80.0,rows,Values directly supported by experimental literature evidence.
+DERIVED_ROWS,EVIDENCE_TYPE,Derived records,7.0,rows,Values calculated or classified from reported literature evidence.
+NOT_REPORTED_ROWS,EVIDENCE_TYPE,Explicitly not-reported records,9.0,rows,Missing literature values are explicitly recorded instead of being invented.
+ASSUMED_ROWS,EVIDENCE_TYPE,Explicit assumptions,1.0,rows,Modeling assumptions are explicitly identified rather than presented as experimental measurements.
+ACTIVE_SIMULATOR_AUDIT,SIMULATOR_INPUT_AUDIT,Detailed simulator-input checks,19.0,checks,Traceability checks across 4 currently simulated devices.
+ACTIVE_PASS_CHECKS,SIMULATOR_INPUT_AUDIT,Passed checks,18.0,checks,Traceable active simulator inputs with no warning.
+ACTIVE_WARNING_CHECKS,SIMULATOR_INPUT_AUDIT,Warning checks,1.0,checks,Traceable inputs that remain explicit modeling assumptions.
+ACTIVE_FAILED_CHECKS,SIMULATOR_INPUT_AUDIT,Failed checks,0.0,checks,Inputs failing traceability or consistency validation.

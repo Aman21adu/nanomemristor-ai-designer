@@ -1,0 +1,148 @@
+AI ZERO-SHOT EVALUATION SUMMARY
+================================
+
+1. HOW THE AI WAS TESTED
+------------------------
+
+The model was evaluated with leave-one-device-out zero-shot testing.
+
+For each fold, one complete physical memristor device was hidden from training.
+The model trained on the remaining 3 devices and then predicted the 245 accelerator configurations for the unseen device.
+
+The AI then selected one accelerator configuration, which was compared against exhaustive simulation of all 245 configurations for that held-out device.
+
+Independent physical devices: 4.
+Configurations per device: 245.
+Total simulated rows: 980.
+
+The 980 configuration rows are not 980 independent physical samples.
+
+2. HELD-OUT DEVICE RESULTS
+--------------------------
+
+HfOx_02:
+  True exhaustive raw-best accuracy: 96.30%
+  AI recommendation: 256x256, W4, ADC6
+  Predicted accuracy: 95.84%
+  Actual accuracy: 95.60%
+  Regret: 0.70 pp
+  Within 0.5 pp of raw best: NO
+  Exact cost-aware optimum: NO
+  Cost-aware rank: outside true near-optimal region
+  Cost-aware Top-3: NO
+
+TaOx_01:
+  True exhaustive raw-best accuracy: 96.17%
+  AI recommendation: 256x256, W4, ADC6
+  Predicted accuracy: 95.94%
+  Actual accuracy: 95.80%
+  Regret: 0.37 pp
+  Within 0.5 pp of raw best: YES
+  Exact cost-aware optimum: YES
+  Cost-aware rank: 1
+  Cost-aware Top-3: YES
+
+TiOx_03:
+  True exhaustive raw-best accuracy: 96.34%
+  AI recommendation: 256x256, W4, ADC7
+  Predicted accuracy: 96.02%
+  Actual accuracy: 96.00%
+  Regret: 0.34 pp
+  Within 0.5 pp of raw best: YES
+  Exact cost-aware optimum: NO
+  Cost-aware rank: 9
+  Cost-aware Top-3: NO
+
+ZnO_01:
+  True exhaustive raw-best accuracy: 96.31%
+  AI recommendation: 256x256, W4, ADC6
+  Predicted accuracy: 95.79%
+  Actual accuracy: 96.04%
+  Regret: 0.27 pp
+  Within 0.5 pp of raw best: YES
+  Exact cost-aware optimum: NO
+  Cost-aware rank: 3
+  Cost-aware Top-3: YES
+
+3. OVERALL RECOMMENDATION QUALITY
+---------------------------------
+
+Mean recommendation regret: 0.420 pp.
+Median recommendation regret: 0.355 pp.
+Worst recommendation regret: 0.700 pp.
+
+Near-optimal success: 3/4 devices = 75.0%.
+Exact cost-aware optimum: 1/4 devices = 25.0%.
+Cost-aware Top-3: 2/4 devices = 50.0%.
+
+4. PREDICTION ACCURACY WHERE IT MATTERS
+---------------------------------------
+
+Global prediction metrics are not the main evidence because very poor configurations can make global R-squared appear extremely high.
+
+The more decision-relevant measurement is prediction error in the true near-optimal region.
+
+Pooled near-region MAE: 0.155 pp.
+Pooled near-region RMSE: 0.504 pp.
+Near-region configuration rows evaluated: 549.
+
+5. DOCUMENTED FAILURE
+---------------------
+
+HfOx_02 failed the 0.5 pp criterion with 0.70 pp regret.
+The recommended configuration achieved 95.60% versus a raw exhaustive best of 96.30%.
+
+This failure is retained as part of the evaluation rather than removed from the reported results.
+
+6. UNCERTAINTY DIAGNOSTIC
+-------------------------
+
+Overall tree-disagreement / absolute-error correlation: 0.582.
+
+Positive correlation means tree disagreement tends to become larger when prediction error becomes larger.
+
+However, this is an uncalibrated ensemble-disagreement heuristic and must not be presented as a statistically calibrated confidence interval.
+
+Baseline mean regret: 0.420 pp.
+Confidence-aware mean regret: 0.433 pp.
+Baseline near-optimal success: 75.0%.
+Confidence-aware near-optimal success: 75.0%.
+
+The confidence-aware rule does not improve the current baseline recommendation performance, so the baseline predictor remains the primary recommender.
+
+Confidence fallback rate: 0.0%.
+
+7. SEARCH EFFICIENCY
+--------------------
+
+Exhaustive unseen-device search: 245 configuration evaluations.
+AI recommendation workflow: 1 selected configuration evaluation.
+
+Reduction in expensive unseen-device simulation/validation evaluations: 99.59%.
+
+This is not a claim of 99.59% reduction in total training or computational cost.
+
+MENTOR ANSWER: HOW ACCURATE IS THE AI?
+--------------------------------------
+
+In the current pilot evaluation, each memristor device is completely hidden during its test fold.
+
+The baseline recommender selects a configuration within 0.5 percentage points of the exhaustive raw best for 3/4 held-out devices (75.0%).
+
+Mean recommendation regret is 0.42 percentage points, and the recommendation is within the cost-aware Top-3 for 2/4 devices (50.0%).
+
+In the decision-relevant near-optimal region, the pooled prediction MAE is 0.155 percentage points.
+
+1 held-out device currently fails the chosen near-optimal criterion, so the system is not presented as perfectly reliable.
+
+CURRENT EVIDENCE LIMITATION
+---------------------------
+
+Only 4 independent physical devices are currently available.
+Each zero-shot fold therefore trains on only 3 physical devices.
+
+The 980 simulator rows come from those 4 devices across 245 accelerator configurations each.
+
+Therefore the current results should be described as pilot proof-of-concept validation.
+
+They are not yet sufficient evidence for broad cross-technology generalization to arbitrary future memristor devices.

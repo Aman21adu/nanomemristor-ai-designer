@@ -1,0 +1,3 @@
+device_id,mapping_assumption,physical_states,effective_signed_levels,slices_per_branch,physical_cells_per_weight,software_baseline_accuracy,software_only_quantized_accuracy,best_current_hardware_accuracy,diagnosis
+ZnO_01,ONE_DIFFERENTIAL_PAIR_PER_WEIGHT,2,3,1,2,96.23,11.54,12.06,Single binary differential pair collapses most trained weights to zero.
+ZnO_01,BIT_SLICED_BINARY,2,15,3,6,96.23,96.06,,Three binary slices per branch recover near-baseline software accuracy; hardware slice-by-slice ADC and shift-add still need simulation.

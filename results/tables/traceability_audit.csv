@@ -1,0 +1,20 @@
+device_id,property_name,simulator_value,trace_value,value_type,evidence_class,status,doi_present,page_present,figure_or_table_present,message
+ZnO_01,conductance_mode,DISCRETE_BINARY,DISCRETE_BINARY,EXPERIMENTAL,DIRECT,PASS,True,True,True,Traceability row found.
+ZnO_01,conductance_states,2.0,2,REPORTED,SUPPORTED,PASS,True,True,True,Traceability row found.
+ZnO_01,on_off_ratio,1000.0,1000,DERIVED,SUPPORTED,PASS,True,True,True,Traceability row found.
+ZnO_01,state_count_status_consistency,REPORTED,REPORTED,CONSISTENCY_CHECK,INTERNAL_CHECK,PASS,True,True,True,state_count_status agrees with traceability evidence type.
+HfOx_02,conductance_mode,ANALOG,ANALOG,EXPERIMENTAL,DIRECT,PASS,True,True,True,Traceability row found.
+HfOx_02,conductance_states,NO_FIXED_COUNT,,NOT_REPORTED,MISSING_OR_NA,PASS,True,True,True,Literature explicitly does not provide a fixed numeric value.
+HfOx_02,on_off_ratio,5.0,5.0,ASSUMED,ASSUMPTION,WARN,True,True,True,Simulator value is explicitly marked as an assumption/modeling approximation.
+HfOx_02,state_count_status_consistency,NOT_REPORTED,NOT_REPORTED,CONSISTENCY_CHECK,INTERNAL_CHECK,PASS,True,True,True,state_count_status agrees with traceability evidence type.
+TaOx_01,conductance_mode,DISCRETE_MULTILEVEL,DISCRETE_MULTILEVEL,EXPERIMENTAL,DIRECT,PASS,True,True,True,Traceability row found.
+TaOx_01,conductance_states,7.0,7,DERIVED,SUPPORTED,PASS,True,True,True,Traceability row found.
+TaOx_01,ron_ohm,1100.0,1100,EXPERIMENTAL,DIRECT,PASS,True,True,True,Traceability row found.
+TaOx_01,roff_ohm,3200000.0,3200000,EXPERIMENTAL,DIRECT,PASS,True,True,True,Traceability row found.
+TaOx_01,profile_ratio_consistency,2909.09,2909.090909090909,DERIVED_CHECK,INTERNAL_CHECK,PASS,True,True,True,Stored ON/OFF ratio agrees with ROFF/RON.
+TaOx_01,on_off_ratio,2909.09,2909.09,DERIVED,SUPPORTED,PASS,True,True,True,Traceability row found.
+TaOx_01,state_count_status_consistency,DERIVED,DERIVED,CONSISTENCY_CHECK,INTERNAL_CHECK,PASS,True,True,True,state_count_status agrees with traceability evidence type.
+TiOx_03,conductance_mode,ANALOG,ANALOG,EXPERIMENTAL,DIRECT,PASS,True,True,True,Traceability row found.
+TiOx_03,conductance_states,NO_FIXED_COUNT,,NOT_REPORTED,MISSING_OR_NA,PASS,True,True,True,Literature explicitly does not provide a fixed numeric value.
+TiOx_03,on_off_ratio,80.0,80,EXPERIMENTAL,DIRECT,PASS,True,True,True,Traceability row found.
+TiOx_03,state_count_status_consistency,NOT_REPORTED,NOT_REPORTED,CONSISTENCY_CHECK,INTERNAL_CHECK,PASS,True,True,True,state_count_status agrees with traceability evidence type.

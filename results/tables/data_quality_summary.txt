@@ -1,0 +1,76 @@
+DATA QUALITY + TRACEABILITY SUMMARY
+===================================
+
+1. LITERATURE DATABASE
+-----------------------
+
+Physical devices represented: 11.
+Property-level traceability records: 100.
+
+2. PROVENANCE COMPLETENESS
+--------------------------
+
+Complete provenance: 100/100 (100.0%).
+
+Missing source titles: 0.
+Missing DOI values: 0.
+Missing page references: 0.
+Missing evidence locators: 0.
+Missing source notes: 0.
+
+3. EVIDENCE CLASSIFICATION
+--------------------------
+
+EXPERIMENTAL: 80.
+DERIVED: 7.
+REPORTED: 1.
+DERIVED_FROM_FABRICATION: 1.
+NOT_REPORTED: 9.
+NOT_APPLICABLE: 1.
+ASSUMED: 1.
+
+Measured, reported, derived, missing and assumed values are not treated as equivalent.
+
+4. ACTIVE SIMULATOR INPUT AUDIT
+--------------------------------
+
+Simulated devices: 4.
+Detailed checks: 19.
+PASS: 18.
+WARN: 1.
+FAIL: 0.
+
+5. EXPLICIT ASSUMPTIONS
+-----------------------
+
+HfOx_02 - on_off_ratio = 5.0
+Reason: Simulator value is explicitly marked as an assumption/modeling approximation.
+
+
+6. EXAMPLE: TaOx_01
+-------------------
+
+RON = 1100 ohm -> EXPERIMENTAL.
+ROFF = 3.2 Mohm -> EXPERIMENTAL.
+ON/OFF ratio = 2909.09 -> DERIVED from ROFF/RON.
+Conductance states = 7 -> DERIVED from the paper's state description.
+
+MENTOR ANSWER: HOW CORRECT IS THE DATA?
+---------------------------------------
+
+All 100 current literature records across 11 devices have complete property-level provenance.
+
+Values are explicitly classified as experimental, reported, derived, not reported, not applicable, fabrication-derived, or assumed.
+
+For the 4 devices currently used by the accelerator simulator, 19 detailed checks produced 18 PASS, 1 WARN and 0 FAIL.
+
+The current warning is an explicitly declared modeling assumption rather than an untraceable or hidden input.
+
+CURRENT LIMITATION
+------------------
+
+Traceability proves where an input came from and how its evidence was classified.
+
+It does not prove that every published measurement is universally correct.
+
+It also does not prove that the simulator has been experimentally validated against fabricated hardware.

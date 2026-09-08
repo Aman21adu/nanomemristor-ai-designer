@@ -1,0 +1,94 @@
+DESIGN-SPACE EXPANSION SUMMARY
+==============================
+
+1. TERMINOLOGY
+--------------
+
+The project currently varies 3 independent accelerator-design parameters.
+
+These 3 parameters generate 245 requested accelerator configurations per device.
+
+Therefore, the correct wording is '245 configurations', not '245 parameters'.
+
+2. CURRENT DESIGN AXES
+----------------------
+
+Crossbar sizes: [16, 32, 64, 128, 256]
+Requested weight bits: [2, 3, 4, 5, 6, 7, 8]
+ADC bits: [4, 5, 6, 7, 8, 9, 10]
+
+Configuration count = 5 x 7 x 7 = 245.
+
+3. DESIGN-SPACE EXPANSION
+-------------------------
+
+Original pilot: 27 configurations.
+V2: 64 configurations.
+Current V3: 245 configurations.
+
+Growth from original: 9.07x (807.4% increase).
+Growth from V2: 3.83x (282.8% increase).
+
+4. CURRENT SIMULATION SCALE
+---------------------------
+
+Simulation-ready physical devices: 4.
+Configurations per device: 245.
+Total device-configuration rows: 980.
+
+The 980 rows are not 980 independent physical-device samples.
+
+There are still only 4 independent physical devices.
+
+5. WHY THE EXPANSION IS MEANINGFUL
+-----------------------------------
+
+The larger search space was created by making the existing simulator-supported accelerator axes denser.
+
+No unsupported temperature, noise, material thickness, or other artificial parameter was added simply to inflate the number of cases.
+
+The expanded search therefore explores more crossbar-size, weight-precision, and ADC-precision tradeoffs while using the same validated simulation pipeline.
+
+6. DEVICE PHYSICS STILL CONSTRAINS THE SPACE
+---------------------------------------------
+
+HfOx_02: 7 requested weight-precision choices -> 7 distinct effective-level counts; maximum effective signed levels = 255.
+TaOx_01: 7 requested weight-precision choices -> 3 distinct effective-level counts; maximum effective signed levels = 13.
+TiOx_03: 7 requested weight-precision choices -> 7 distinct effective-level counts; maximum effective signed levels = 255.
+ZnO_01: 7 requested weight-precision choices -> 7 distinct effective-level counts; maximum effective signed levels = 255.
+
+This means 245 is the requested accelerator configuration space.
+
+A physical device may make several requested configurations effectively equivalent.
+
+For example, TaOx_01 is limited by its 7-state device capability, giving a maximum of 13 signed differential weight levels.
+
+7. EXPANDED SEARCH USEFULNESS
+-----------------------------
+
+Mean regret of the exhaustive cost-aware selected configurations: 0.390 percentage points.
+Worst selected regret: 0.460 percentage points.
+
+The expanded search therefore supports lower-cost near-optimal design selection rather than searching only for maximum simulated accuracy.
+
+MENTOR ANSWER: CAN 27 BE INCREASED?
+------------------------------------
+
+Yes. The original 27-configuration search space has been expanded to 245 configurations per device.
+
+The expansion uses 5 crossbar sizes, 7 requested weight precisions, and 7 ADC precisions.
+
+Across the 4 currently simulation-ready devices, this produces 980 device-configuration simulation rows.
+
+The important point is that these are configurations, not independent parameters.
+
+The project still varies 3 accelerator-design parameters, and the new values were added only where the simulator already supports them.
+
+CURRENT LIMITATION
+------------------
+
+A larger configuration grid strengthens design-space exploration, but it does not increase the number of independent physical memristor devices.
+
+The project still has only 4 independent simulation-ready device profiles.
+
+Future expansion should prioritize additional literature-supported physical devices and additional validated physics, rather than inflating the configuration count alone.
