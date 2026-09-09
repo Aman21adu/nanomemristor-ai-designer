@@ -33,6 +33,7 @@ DEVICE_FILE = DATA_DIR / "device_profiles.csv"
 TRACE_FILE = DATA_DIR / "source_traceability.csv"
 AUDIT_FILE = RESULTS_DIR / "traceability_audit.csv"
 OPTIMAL_FILE = RESULTS_DIR / "device_optimal_configs.csv"
+BASELINE_FILE = PROJECT_ROOT / "results" / "mnist_baseline_accuracy.txt"
 
 
 # ============================================================
@@ -398,6 +399,64 @@ st.markdown(
        CALLOUTS
        -------------------------------------------------------- */
 
+    .zero-shot-box {
+        border-radius: 18px;
+
+        padding: 1.15rem 1.3rem;
+
+        border:
+            1px solid
+            rgba(75, 95, 220, 0.34);
+
+        background:
+            linear-gradient(
+                135deg,
+                rgba(80, 80, 200, 0.12),
+                rgba(20, 145, 165, 0.06)
+            );
+
+        margin-top: 0.75rem;
+        margin-bottom: 1.05rem;
+
+        line-height: 1.5;
+    }
+
+    .zero-shot-kicker {
+        font-size: 0.74rem;
+        font-weight: 850;
+        text-transform: uppercase;
+        letter-spacing: 0.11em;
+        opacity: 0.62;
+        margin-bottom: 0.45rem;
+    }
+
+    .zero-shot-title {
+        font-size: 1.12rem;
+        font-weight: 850;
+        line-height: 1.35;
+    }
+
+    .zero-shot-row {
+        margin-top: 0.7rem;
+        font-size: 0.92rem;
+        line-height: 1.5;
+    }
+
+    .zero-shot-label {
+        font-weight: 800;
+    }
+
+    .zero-shot-note {
+        margin-top: 0.85rem;
+        padding-top: 0.8rem;
+        border-top:
+            1px solid
+            rgba(110, 110, 110, 0.18);
+        font-size: 0.88rem;
+        opacity: 0.78;
+        line-height: 1.5;
+    }
+
     .callout {
         border-radius: 14px;
 
@@ -553,6 +612,62 @@ st.markdown(
         font-size: 1.7rem;
 
         opacity: 0.38;
+    }
+
+
+    /* --------------------------------------------------------
+       WHY THIS DESIGN
+       -------------------------------------------------------- */
+
+    .why-card {
+        min-height: 170px;
+
+        border-radius: 15px;
+
+        padding: 1rem 1.05rem;
+
+        border:
+            1px solid
+            rgba(110, 110, 110, 0.20);
+
+        background:
+            rgba(120, 120, 120, 0.035);
+
+        white-space: normal !important;
+        overflow: visible !important;
+        overflow-wrap: anywhere !important;
+    }
+
+    .why-kicker {
+        font-size: 0.70rem;
+
+        font-weight: 800;
+
+        text-transform: uppercase;
+
+        letter-spacing: 0.08em;
+
+        opacity: 0.55;
+
+        margin-bottom: 0.35rem;
+    }
+
+    .why-title {
+        font-size: 1.03rem;
+
+        font-weight: 800;
+
+        line-height: 1.30;
+    }
+
+    .why-text {
+        margin-top: 0.45rem;
+
+        font-size: 0.84rem;
+
+        line-height: 1.46;
+
+        opacity: 0.72;
     }
 
     </style>
@@ -1054,6 +1169,221 @@ def human_evidence_type(
     )
 
 
+def evidence_category(
+    value_type,
+    simulator_value=None,
+    trace_value=None,
+):
+
+    raw = clean_text(
+        value_type,
+        fallback=""
+    ).strip().upper()
+
+    normalized = (
+        raw
+        .replace("-", "_")
+        .replace(" ", "_")
+    )
+
+    if normalized in {
+        "REPORTED",
+        "MEASURED",
+        "EXPERIMENTAL",
+        "DIRECTLY_REPORTED",
+    }:
+        return "Reported"
+
+    if normalized in {
+        "DERIVED",
+        "CALCULATED",
+        "COMPUTED",
+        "INFERRED",
+    }:
+        return "Derived"
+
+    if normalized in {
+        "ASSUMED",
+        "MODEL_ASSUMPTION",
+        "SIMULATOR_ASSUMPTION",
+    }:
+        return "Assumed"
+
+    if normalized in {
+        "MISSING",
+        "NOT_REPORTED",
+        "UNREPORTED",
+        "NOT_AVAILABLE",
+    }:
+        return "Missing"
+
+    simulator_missing = (
+        simulator_value is None
+        or pd.isna(simulator_value)
+        or str(simulator_value).strip() == ""
+    )
+
+    trace_missing = (
+        trace_value is None
+        or pd.isna(trace_value)
+        or str(trace_value).strip() == ""
+    )
+
+    if simulator_missing and trace_missing:
+        return "Missing"
+
+    return (
+        human_evidence_type(
+            value_type
+        )
+        if raw
+        else "Unclassified"
+    )
+
+
+def source_location_text(
+    page=None,
+    figure_or_table=None,
+):
+
+    parts = []
+
+    if (
+        page is not None
+        and not pd.isna(page)
+        and str(page).strip()
+    ):
+        parts.append(
+            f"p. {str(page).strip()}"
+        )
+
+    if (
+        figure_or_table is not None
+        and not pd.isna(figure_or_table)
+        and str(figure_or_table).strip()
+    ):
+        parts.append(
+            str(figure_or_table).strip()
+        )
+
+    return (
+        " • ".join(parts)
+        if parts
+        else "Not specified"
+    )
+
+
+def is_integrity_check_record(
+    row,
+):
+
+    property_name = clean_text(
+        row.get(
+            "property_name"
+        ),
+        fallback="",
+    ).strip().lower()
+
+    value_type = clean_text(
+        row.get(
+            "value_type"
+        ),
+        fallback="",
+    ).strip().upper()
+
+    audit_only_properties = {
+        "profile_ratio_consistency",
+        "state_count_status_consistency",
+    }
+
+    audit_only_types = {
+        "DERIVED_CHECK",
+        "CONSISTENCY_CHECK",
+    }
+
+    return (
+        property_name in audit_only_properties
+        or value_type in audit_only_types
+    )
+
+
+def format_evidence_value(
+    value,
+    property_name,
+    unit="",
+):
+
+    if (
+        value is None
+        or pd.isna(value)
+        or str(value).strip() == ""
+    ):
+        return "—"
+
+    property_name = clean_text(
+        property_name,
+        fallback="",
+    ).strip().lower()
+
+    unit = clean_text(
+        unit,
+        fallback="",
+    ).strip()
+
+    raw_text = str(
+        value
+    ).strip()
+
+    # Keep dimensionless ON/OFF ratio free of derivation notation
+    # such as "R4/LRS", which is not a physical unit.
+    if property_name == "on_off_ratio":
+
+        try:
+            numeric = float(
+                value
+            )
+
+            return f"{numeric:.2f}"
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+            return raw_text
+
+    # State counts are easier to read as integers when integral.
+    if property_name == "conductance_states":
+
+        try:
+            numeric = float(
+                value
+            )
+
+            if numeric.is_integer():
+                return str(
+                    int(
+                        numeric
+                    )
+                )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+            pass
+
+    # Improve readability of resistance units.
+    if unit.lower() == "ohm":
+        unit = "Ω"
+
+    if unit:
+        return (
+            f"{raw_text} {unit}"
+        )
+
+    return raw_text
+
+
 def render_process_card(
     number,
     title,
@@ -1124,6 +1454,521 @@ def render_status_card(
     )
 
 
+def render_accuracy_validation_chart(
+    predicted_accuracy,
+    actual_accuracy,
+    exhaustive_best_accuracy,
+    baseline_accuracy,
+):
+
+    chart_df = pd.DataFrame(
+        {
+            "Result": [
+                "Predicted",
+                "Actual recommended",
+                "Exhaustive best",
+                "Software baseline",
+            ],
+            "Accuracy": [
+                float(predicted_accuracy),
+                float(actual_accuracy),
+                float(exhaustive_best_accuracy),
+                float(baseline_accuracy),
+            ],
+        }
+    )
+
+    chart_df["Label"] = chart_df["Accuracy"].map(
+        lambda value: f"{value:.2f}%"
+    )
+
+    low = float(chart_df["Accuracy"].min())
+    high = float(chart_df["Accuracy"].max())
+    spread = max(high - low, 0.10)
+    padding = max(0.12, spread * 0.35)
+
+    spec = {
+        "height": 320,
+        "title": "Prediction → Exhaustive Validation (zoomed accuracy scale)",
+        "layer": [
+            {
+                "mark": {
+                    "type": "line",
+                    "opacity": 0.35,
+                },
+                "encoding": {
+                    "x": {
+                        "field": "Result",
+                        "type": "nominal",
+                        "sort": [
+                            "Predicted",
+                            "Actual recommended",
+                            "Exhaustive best",
+                            "Software baseline",
+                        ],
+                        "axis": {
+                            "title": None,
+                            "labelAngle": 0,
+                        },
+                    },
+                    "y": {
+                        "field": "Accuracy",
+                        "type": "quantitative",
+                        "scale": {
+                            "domain": [low - padding, high + padding],
+                            "zero": False,
+                        },
+                        "axis": {
+                            "title": "Accuracy (%)",
+                            "format": ".2f",
+                        },
+                    },
+                },
+            },
+            {
+                "mark": {
+                    "type": "point",
+                    "filled": True,
+                    "size": 120,
+                },
+                "encoding": {
+                    "x": {
+                        "field": "Result",
+                        "type": "nominal",
+                        "sort": [
+                            "Predicted",
+                            "Actual recommended",
+                            "Exhaustive best",
+                            "Software baseline",
+                        ],
+                    },
+                    "y": {
+                        "field": "Accuracy",
+                        "type": "quantitative",
+                        "scale": {
+                            "domain": [low - padding, high + padding],
+                            "zero": False,
+                        },
+                    },
+                    "tooltip": [
+                        {"field": "Result", "type": "nominal"},
+                        {
+                            "field": "Accuracy",
+                            "type": "quantitative",
+                            "format": ".3f",
+                        },
+                    ],
+                },
+            },
+            {
+                "mark": {
+                    "type": "text",
+                    "dy": -16,
+                    "fontWeight": "bold",
+                },
+                "encoding": {
+                    "x": {
+                        "field": "Result",
+                        "type": "nominal",
+                        "sort": [
+                            "Predicted",
+                            "Actual recommended",
+                            "Exhaustive best",
+                            "Software baseline",
+                        ],
+                    },
+                    "y": {
+                        "field": "Accuracy",
+                        "type": "quantitative",
+                        "scale": {
+                            "domain": [low - padding, high + padding],
+                            "zero": False,
+                        },
+                    },
+                    "text": {
+                        "field": "Label",
+                        "type": "nominal",
+                    },
+                },
+            },
+        ],
+    }
+
+    st.vega_lite_chart(
+        chart_df,
+        spec,
+        use_container_width=True,
+    )
+
+
+def render_regret_threshold_chart(
+    regret_pp,
+    threshold_pp,
+):
+
+    regret_pp = float(regret_pp)
+    threshold_pp = float(threshold_pp)
+    passed = regret_pp <= threshold_pp
+    result_text = "PASS" if passed else "FAIL"
+
+    axis_max = max(
+        threshold_pp * 1.25,
+        regret_pp * 1.20,
+        threshold_pp + 0.10,
+    )
+
+    bar_df = pd.DataFrame(
+        {
+            "Metric": ["Regret"],
+            "Start": [0.0],
+            "Value": [regret_pp],
+            "Label": [f"{regret_pp:.2f} pp — {result_text}"],
+        }
+    )
+
+    spec = {
+        "height": 170,
+        "title": "Regret against the near-optimal success threshold",
+        "layer": [
+            {
+                "mark": {
+                    "type": "bar",
+                    "size": 30,
+                },
+                "encoding": {
+                    "x": {
+                        "field": "Value",
+                        "type": "quantitative",
+                        "scale": {
+                            "domain": [0, axis_max],
+                            "zero": True,
+                        },
+                        "axis": {
+                            "title": "Accuracy regret (percentage points)",
+                            "format": ".2f",
+                        },
+                    },
+                    "x2": {
+                        "field": "Start",
+                    },
+                    "y": {
+                        "field": "Metric",
+                        "type": "nominal",
+                        "axis": {"title": None},
+                    },
+                    "tooltip": [
+                        {
+                            "field": "Value",
+                            "type": "quantitative",
+                            "format": ".3f",
+                            "title": "Regret (pp)",
+                        }
+                    ],
+                },
+            },
+            {
+                "data": {
+                    "values": [
+                        {"Threshold": threshold_pp}
+                    ]
+                },
+                "mark": {
+                    "type": "rule",
+                    "strokeDash": [6, 5],
+                    "size": 2,
+                },
+                "encoding": {
+                    "x": {
+                        "field": "Threshold",
+                        "type": "quantitative",
+                        "scale": {
+                            "domain": [0, axis_max],
+                            "zero": True,
+                        },
+                    }
+                },
+            },
+            {
+                "data": {
+                    "values": [
+                        {
+                            "Threshold": threshold_pp,
+                            "ThresholdLabel": f"Threshold {threshold_pp:.2f} pp",
+                        }
+                    ]
+                },
+                "mark": {
+                    "type": "text",
+                    "angle": 270,
+                    "dx": 44,
+                    "dy": -6,
+                    "fontWeight": "bold",
+                },
+                "encoding": {
+                    "x": {
+                        "field": "Threshold",
+                        "type": "quantitative",
+                        "scale": {
+                            "domain": [0, axis_max],
+                            "zero": True,
+                        },
+                    },
+                    "text": {
+                        "field": "ThresholdLabel",
+                        "type": "nominal",
+                    },
+                },
+            },
+            {
+                "mark": {
+                    "type": "text",
+                    "align": "left",
+                    "dx": 8,
+                    "dy": -24,
+                    "fontWeight": "bold",
+                },
+                "encoding": {
+                    "x": {
+                        "field": "Value",
+                        "type": "quantitative",
+                        "scale": {
+                            "domain": [0, axis_max],
+                            "zero": True,
+                        },
+                    },
+                    "y": {
+                        "field": "Metric",
+                        "type": "nominal",
+                    },
+                    "text": {
+                        "field": "Label",
+                        "type": "nominal",
+                    },
+                },
+            },
+        ],
+    }
+
+    st.vega_lite_chart(
+        bar_df,
+        spec,
+        use_container_width=True,
+    )
+
+
+def render_predicted_vs_actual_chart(
+    candidate_df,
+    recommended_row,
+    raw_best_row,
+):
+
+    chart_df = candidate_df[
+        [
+            "predicted_accuracy",
+            "accuracy",
+            "crossbar_size",
+            "requested_weight_bits",
+            "adc_bits",
+        ]
+    ].copy()
+
+    chart_df = chart_df.rename(
+        columns={
+            "predicted_accuracy": "Predicted Accuracy",
+            "accuracy": "Actual Accuracy",
+            "crossbar_size": "Crossbar",
+            "requested_weight_bits": "Weight Bits",
+            "adc_bits": "ADC Bits",
+        }
+    )
+
+    min_axis = float(
+        min(
+            chart_df["Predicted Accuracy"].min(),
+            chart_df["Actual Accuracy"].min(),
+        )
+    )
+
+    max_axis = float(
+        max(
+            chart_df["Predicted Accuracy"].max(),
+            chart_df["Actual Accuracy"].max(),
+        )
+    )
+
+    padding = max(0.05, (max_axis - min_axis) * 0.04)
+    low = min_axis - padding
+    high = max_axis + padding
+
+    recommended_point = {
+        "Predicted Accuracy": float(
+            recommended_row["predicted_accuracy"]
+        ),
+        "Actual Accuracy": float(
+            recommended_row["accuracy"]
+        ),
+        "Label": "AI recommendation",
+    }
+
+    best_point = {
+        "Predicted Accuracy": float(
+            raw_best_row["predicted_accuracy"]
+        ),
+        "Actual Accuracy": float(
+            raw_best_row["accuracy"]
+        ),
+        "Label": "Exhaustive best",
+    }
+
+    ideal_line = [
+        {
+            "Predicted Accuracy": low,
+            "Actual Accuracy": low,
+        },
+        {
+            "Predicted Accuracy": high,
+            "Actual Accuracy": high,
+        },
+    ]
+
+    x_encoding = {
+        "field": "Predicted Accuracy",
+        "type": "quantitative",
+        "scale": {
+            "domain": [low, high],
+            "zero": False,
+        },
+        "axis": {
+            "title": "Predicted accuracy (%)",
+            "format": ".2f",
+        },
+    }
+
+    y_encoding = {
+        "field": "Actual Accuracy",
+        "type": "quantitative",
+        "scale": {
+            "domain": [low, high],
+            "zero": False,
+        },
+        "axis": {
+            "title": "Actual simulated accuracy (%)",
+            "format": ".2f",
+        },
+    }
+
+    spec = {
+        "height": 430,
+        "title": (
+            "Predicted vs actual accuracy across "
+            f"{len(chart_df)} held-out-device configurations"
+        ),
+        "layer": [
+            {
+                "mark": {
+                    "type": "point",
+                    "filled": True,
+                    "size": 48,
+                    "opacity": 0.48,
+                },
+                "encoding": {
+                    "x": x_encoding,
+                    "y": y_encoding,
+                    "tooltip": [
+                        {
+                            "field": "Predicted Accuracy",
+                            "type": "quantitative",
+                            "format": ".3f",
+                        },
+                        {
+                            "field": "Actual Accuracy",
+                            "type": "quantitative",
+                            "format": ".3f",
+                        },
+                        {"field": "Crossbar", "type": "quantitative"},
+                        {"field": "Weight Bits", "type": "quantitative"},
+                        {"field": "ADC Bits", "type": "quantitative"},
+                    ],
+                },
+            },
+            {
+                "data": {"values": ideal_line},
+                "mark": {
+                    "type": "line",
+                    "strokeDash": [7, 5],
+                    "opacity": 0.75,
+                },
+                "encoding": {
+                    "x": x_encoding,
+                    "y": y_encoding,
+                },
+            },
+            {
+                "data": {"values": [recommended_point]},
+                "mark": {
+                    "type": "point",
+                    "filled": True,
+                    "shape": "diamond",
+                    "size": 230,
+                },
+                "encoding": {
+                    "x": x_encoding,
+                    "y": y_encoding,
+                },
+            },
+            {
+                "data": {"values": [recommended_point]},
+                "mark": {
+                    "type": "text",
+                    "dx": 10,
+                    "dy": -12,
+                    "align": "left",
+                    "fontWeight": "bold",
+                },
+                "encoding": {
+                    "x": x_encoding,
+                    "y": y_encoding,
+                    "text": {"field": "Label", "type": "nominal"},
+                },
+            },
+            {
+                "data": {"values": [best_point]},
+                "mark": {
+                    "type": "point",
+                    "filled": True,
+                    "shape": "triangle-up",
+                    "size": 220,
+                },
+                "encoding": {
+                    "x": x_encoding,
+                    "y": y_encoding,
+                },
+            },
+            {
+                "data": {"values": [best_point]},
+                "mark": {
+                    "type": "text",
+                    "dx": 10,
+                    "dy": 14,
+                    "align": "left",
+                    "fontWeight": "bold",
+                },
+                "encoding": {
+                    "x": x_encoding,
+                    "y": y_encoding,
+                    "text": {"field": "Label", "type": "nominal"},
+                },
+            },
+        ],
+    }
+
+    st.vega_lite_chart(
+        chart_df,
+        spec,
+        use_container_width=True,
+    )
+
+
 # ============================================================
 # VERIFY FILES
 # ============================================================
@@ -1136,6 +1981,7 @@ require_files(
         TRACE_FILE,
         AUDIT_FILE,
         OPTIMAL_FILE,
+        BASELINE_FILE,
     ]
 )
 
@@ -1189,6 +2035,11 @@ def load_data():
     audit,
     optimal,
 ) = load_data()
+
+
+software_baseline_accuracy = float(
+    BASELINE_FILE.read_text(encoding="utf-8").strip()
+)
 
 
 # ============================================================
@@ -2450,6 +3301,532 @@ with forward_tab:
 
 
     # ========================================================
+    # EVIDENCE-AWARE DEVICE PROFILE
+    # ========================================================
+
+    st.markdown(
+        "### Evidence-Aware Device Profile"
+    )
+
+
+    st.write(
+        "The simulator does not treat every input as equally "
+        "supported. Device parameters are separated from "
+        "consistency checks so that evidence quality and audit "
+        "quality are not mixed together."
+    )
+
+
+    selected_trace_forward = trace[
+
+        trace[
+            "device_id"
+        ]
+        ==
+        selected_device
+
+    ].copy()
+
+
+    selected_audit_forward = audit[
+
+        audit[
+            "device_id"
+        ]
+        ==
+        selected_device
+
+    ].copy()
+
+
+    input_audit_forward = selected_audit_forward[
+
+        ~selected_audit_forward.apply(
+            is_integrity_check_record,
+            axis=1,
+        )
+
+    ].copy()
+
+
+    integrity_audit_forward = selected_audit_forward[
+
+        selected_audit_forward.apply(
+            is_integrity_check_record,
+            axis=1,
+        )
+
+    ].copy()
+
+
+    trace_lookup = {}
+
+
+    for _, trace_row in selected_trace_forward.iterrows():
+
+        property_name = clean_text(
+            trace_row.get(
+                "property_name"
+            ),
+            fallback="",
+        )
+
+        if (
+            property_name
+            and property_name not in trace_lookup
+        ):
+
+            trace_lookup[
+                property_name
+            ] = trace_row
+
+
+    evidence_rows = []
+
+
+    for _, audit_row in input_audit_forward.iterrows():
+
+        property_name = clean_text(
+            audit_row.get(
+                "property_name"
+            ),
+            fallback="",
+        )
+
+
+        trace_row = trace_lookup.get(
+            property_name
+        )
+
+
+        simulator_value = audit_row.get(
+            "simulator_value"
+        )
+
+
+        trace_value = audit_row.get(
+            "trace_value"
+        )
+
+
+        value_type = audit_row.get(
+            "value_type"
+        )
+
+
+        category = evidence_category(
+            value_type,
+            simulator_value=simulator_value,
+            trace_value=trace_value,
+        )
+
+
+        if trace_row is not None:
+
+            unit = clean_text(
+                trace_row.get(
+                    "unit"
+                ),
+                fallback="",
+            )
+
+            source_title = clean_text(
+                trace_row.get(
+                    "source_title"
+                ),
+                fallback="Not specified",
+            )
+
+            doi = clean_text(
+                trace_row.get(
+                    "doi"
+                ),
+                fallback="Not specified",
+            )
+
+            source_note = clean_text(
+                trace_row.get(
+                    "source_note"
+                ),
+                fallback="Not specified",
+            )
+
+            source_location = (
+                source_location_text(
+                    trace_row.get(
+                        "page"
+                    ),
+                    trace_row.get(
+                        "figure_or_table"
+                    ),
+                )
+            )
+
+        else:
+
+            unit = ""
+            source_title = "Not linked"
+            doi = "Not linked"
+            source_note = "Not linked"
+            source_location = "Not linked"
+
+
+        simulator_display = format_evidence_value(
+            simulator_value,
+            property_name,
+            unit,
+        )
+
+
+        trace_display = format_evidence_value(
+            trace_value,
+            property_name,
+            unit,
+        )
+
+
+        evidence_rows.append(
+            {
+
+                "Parameter":
+                    human_property_name(
+                        property_name
+                    ),
+
+                "Simulator Value":
+                    simulator_display,
+
+                "Literature / Source Value":
+                    trace_display,
+
+                "Evidence Status":
+                    category,
+
+                "Source Location":
+                    source_location,
+
+                "Audit":
+                    clean_text(
+                        audit_row.get(
+                            "status"
+                        ),
+                        fallback="Not checked",
+                    ),
+
+                "Explanation":
+                    clean_text(
+                        audit_row.get(
+                            "message"
+                        ),
+                        fallback="No audit note stored.",
+                    ),
+
+                "Source Note":
+                    source_note,
+
+                "Source":
+                    source_title,
+
+                "DOI / Identifier":
+                    doi,
+
+            }
+        )
+
+
+    evidence_df = pd.DataFrame(
+        evidence_rows
+    )
+
+
+    category_order = [
+        "Reported",
+        "Derived",
+        "Assumed",
+        "Missing",
+    ]
+
+
+    evidence_counts = {
+
+        category: int(
+            (
+                evidence_df[
+                    "Evidence Status"
+                ]
+                ==
+                category
+            ).sum()
+        )
+        if not evidence_df.empty
+        else 0
+
+        for category
+        in category_order
+
+    }
+
+
+    evidence_metric_columns = st.columns(
+        4
+    )
+
+
+    evidence_metric_columns[0].metric(
+        "Reported",
+        evidence_counts[
+            "Reported"
+        ],
+    )
+
+
+    evidence_metric_columns[1].metric(
+        "Derived",
+        evidence_counts[
+            "Derived"
+        ],
+    )
+
+
+    evidence_metric_columns[2].metric(
+        "Assumed",
+        evidence_counts[
+            "Assumed"
+        ],
+    )
+
+
+    evidence_metric_columns[3].metric(
+        "Missing",
+        evidence_counts[
+            "Missing"
+        ],
+    )
+
+
+    if evidence_df.empty:
+
+        st.warning(
+            "No simulator-input evidence records are stored "
+            "for this device."
+        )
+
+    else:
+
+        compact_evidence_columns = [
+            "Parameter",
+            "Simulator Value",
+            "Literature / Source Value",
+            "Evidence Status",
+            "Source Location",
+            "Audit",
+        ]
+
+
+        st.dataframe(
+            evidence_df[
+                compact_evidence_columns
+            ],
+            use_container_width=True,
+            hide_index=True,
+        )
+
+
+        with st.expander(
+            "View full evidence trail and source details"
+        ):
+
+            st.dataframe(
+                evidence_df,
+                use_container_width=True,
+                hide_index=True,
+            )
+
+
+    render_html(
+        """
+        <div class="callout">
+
+            <strong>
+                How to read the evidence status
+            </strong>
+
+            <br><br>
+
+            <strong>Reported</strong> — directly supported by
+            the stored literature/experimental record.
+
+            <br>
+
+            <strong>Derived</strong> — calculated or inferred
+            from reported values.
+
+            <br>
+
+            <strong>Assumed</strong> — explicitly introduced by
+            the simulator or modeling workflow.
+
+            <br>
+
+            <strong>Missing</strong> — not available in the
+            stored evidence and not silently presented as an
+            experimental fact.
+
+        </div>
+        """
+    )
+
+
+    if evidence_counts[
+        "Assumed"
+    ] > 0:
+
+        st.warning(
+            f"This device currently uses "
+            f"{evidence_counts['Assumed']} explicitly "
+            f"assumption-based simulator input(s)."
+        )
+
+
+    if evidence_counts[
+        "Missing"
+    ] > 0:
+
+        st.warning(
+            f"This device currently has "
+            f"{evidence_counts['Missing']} parameter(s) "
+            f"classified as missing in the stored evidence."
+        )
+
+
+    st.markdown(
+        "#### Evidence Integrity Checks"
+    )
+
+
+    st.caption(
+        "These rows do not represent additional device "
+        "parameters. They verify that derived/profile values "
+        "remain internally consistent with the stored evidence."
+    )
+
+
+    if integrity_audit_forward.empty:
+
+        st.info(
+            "No separate integrity-check records are stored "
+            "for this device."
+        )
+
+    else:
+
+        integrity_rows = []
+
+
+        for _, check_row in integrity_audit_forward.iterrows():
+
+            property_name = clean_text(
+                check_row.get(
+                    "property_name"
+                ),
+                fallback="",
+            )
+
+
+            integrity_rows.append(
+                {
+
+                    "Check":
+                        human_property_name(
+                            property_name
+                        ),
+
+                    "Computed / Profile Value":
+                        clean_text(
+                            check_row.get(
+                                "simulator_value"
+                            ),
+                            fallback="—",
+                        ),
+
+                    "Reference Value":
+                        clean_text(
+                            check_row.get(
+                                "trace_value"
+                            ),
+                            fallback="—",
+                        ),
+
+                    "Status":
+                        clean_text(
+                            check_row.get(
+                                "status"
+                            ),
+                            fallback="Not checked",
+                        ),
+
+                    "Explanation":
+                        clean_text(
+                            check_row.get(
+                                "message"
+                            ),
+                            fallback="No audit note stored.",
+                        ),
+
+                }
+            )
+
+
+        integrity_df = pd.DataFrame(
+            integrity_rows
+        )
+
+
+        st.dataframe(
+            integrity_df,
+            use_container_width=True,
+            hide_index=True,
+        )
+
+
+        integrity_pass_count = int(
+            (
+                integrity_df[
+                    "Status"
+                ]
+                ==
+                "PASS"
+            ).sum()
+        )
+
+
+        if (
+            integrity_pass_count
+            ==
+            len(
+                integrity_df
+            )
+        ):
+
+            st.success(
+                f"All {integrity_pass_count} stored "
+                f"evidence-integrity checks PASS."
+            )
+
+        else:
+
+            st.warning(
+                f"{integrity_pass_count} of "
+                f"{len(integrity_df)} stored "
+                f"evidence-integrity checks PASS."
+            )
+
+
+    st.divider()
+
+
+
+    # ========================================================
     # ZERO-SHOT AI
     # ========================================================
 
@@ -2472,28 +3849,61 @@ with forward_tab:
     ]
 
 
-    st.write(
-        "**Completely hidden from training:** "
+    hidden_device_name = (
         f"{selected_material['symbol']} — "
         f"{selected_material['short_name']}"
     )
 
 
-    st.write(
-        "**Training devices:** "
-        + " • ".join(
-            training_public_names
-        )
+    training_device_text = " • ".join(
+        training_public_names
     )
 
 
-    st.caption(
-        "The selected device's simulated accuracy values "
-        "are not used during training in this test fold."
+    render_html(
+        f"""
+        <div class="zero-shot-box">
+
+            <div class="zero-shot-kicker">
+                Zero-shot test
+            </div>
+
+            <div class="zero-shot-title">
+                The selected memristor is completely hidden
+                from model training.
+            </div>
+
+            <div class="zero-shot-row">
+                <span class="zero-shot-label">
+                    Hidden device:
+                </span>
+                {hidden_device_name}
+            </div>
+
+            <div class="zero-shot-row">
+                <span class="zero-shot-label">
+                    Training devices:
+                </span>
+                {training_device_text}
+            </div>
+
+            <div class="zero-shot-note">
+                No simulated accuracy values from
+                <strong>{hidden_device_name}</strong>
+                are used to train the model in this fold.
+                The AI must recommend an accelerator using
+                design knowledge learned from the other
+                memristor technologies.
+            </div>
+
+        </div>
+        """
     )
 
 
-    st.write("")
+    st.markdown(
+        "#### AI Recommendation"
+    )
 
 
     recommendation_columns = st.columns(
@@ -2535,34 +3945,79 @@ with forward_tab:
     )
 
 
-    result_columns = st.columns(
-        3
+    prediction_left, prediction_center, prediction_right = (
+        st.columns(
+            [1, 1.15, 1]
+        )
     )
 
 
-    result_columns[0].metric(
-        "Predicted Accuracy",
-        f"{recommended_predicted_accuracy:.2f}%",
+    with prediction_center:
+
+        st.metric(
+            "Predicted Accuracy",
+            f"{recommended_predicted_accuracy:.2f}%",
+        )
+
+
+    with st.expander(
+        "Prediction uncertainty details"
+    ):
+
+        uncertainty_columns = st.columns(
+            2
+        )
+
+
+        uncertainty_columns[0].metric(
+            "Random-Forest Tree Disagreement",
+            f"{recommended_uncertainty:.3f} pp",
+        )
+
+
+        uncertainty_columns[1].metric(
+            "Conservative Prediction Score",
+            f"{recommended_lower_bound:.2f}%",
+        )
+
+
+        st.caption(
+            "Conservative prediction score = predicted accuracy "
+            "minus Random-Forest tree disagreement. "
+            "Tree disagreement is an uncertainty heuristic, "
+            "not a calibrated confidence interval and not a "
+            "measured accuracy value."
+        )
+
+
+    recommendation_details = pd.DataFrame(
+        [
+            {
+                "Crossbar": (
+                    f"{recommended_crossbar} × "
+                    f"{recommended_crossbar}"
+                ),
+                "Weight Precision": (
+                    f"{recommended_weight_bits}-bit"
+                ),
+                "ADC Precision": (
+                    f"{recommended_adc_bits}-bit"
+                ),
+                "Effective Levels": recommended_effective_levels,
+                "Cells / Weight": recommended_cells_per_weight,
+                "Mapping": mapping_public_name,
+                "Relative Cost Proxy": int(
+                    round(recommended_cost_proxy)
+                ),
+            }
+        ]
     )
 
 
-    result_columns[1].metric(
-        "Prediction Disagreement",
-        f"{recommended_uncertainty:.3f} pp",
-    )
-
-
-    result_columns[2].metric(
-        "Conservative Prediction Score",
-        f"{recommended_lower_bound:.2f}%",
-    )
-
-
-    st.caption(
-        "Conservative prediction score = predicted accuracy "
-        "minus Random-Forest tree disagreement. "
-        "Tree disagreement is an uncertainty heuristic, "
-        "not a calibrated confidence interval."
+    st.dataframe(
+        recommendation_details,
+        use_container_width=True,
+        hide_index=True,
     )
 
 
@@ -2583,6 +4038,207 @@ with forward_tab:
         </div>
         """
     )
+
+
+    # ========================================================
+    # WHY THIS DESIGN
+    # ========================================================
+
+    st.markdown(
+        "### Why this design?"
+    )
+
+
+    st.caption(
+        "This explanation separates device/simulator constraints "
+        "from the AI model's learned selection. It does not claim "
+        "that the Random Forest proves physical causation."
+    )
+
+
+    if state_count_available == 1:
+
+        state_explanation_title = (
+            f"{physical_state_count} physical states "
+            f"→ {recommended_effective_levels} effective levels"
+        )
+
+        state_explanation_text = (
+            "The literature-supported physical state capability "
+            "is used by the simulator's weight-mapping model. "
+            "For this selected configuration, that mapping yields "
+            f"{recommended_effective_levels} effective signed "
+            "weight levels."
+        )
+
+    else:
+
+        state_explanation_title = (
+            f"No fixed physical state count "
+            f"→ {recommended_effective_levels} effective levels"
+        )
+
+        state_explanation_text = (
+            "This literature profile does not report a fixed "
+            "discrete state count. The displayed effective levels "
+            "therefore come from the simulator's idealized "
+            "accelerator mapping and must not be interpreted as "
+            "measured physical conductance states."
+        )
+
+
+    why_row_1 = st.columns(
+        2
+    )
+
+
+    with why_row_1[0]:
+
+        render_html(
+            f"""
+            <div class="why-card">
+
+                <div class="why-kicker">
+                    Physical device constraint
+                </div>
+
+                <div class="why-title">
+                    {state_explanation_title}
+                </div>
+
+                <div class="why-text">
+                    {state_explanation_text}
+                </div>
+
+            </div>
+            """
+        )
+
+
+    with why_row_1[1]:
+
+        render_html(
+            f"""
+            <div class="why-card">
+
+                <div class="why-kicker">
+                    Weight representation
+                </div>
+
+                <div class="why-title">
+                    {recommended_weight_bits}-bit requested precision
+                </div>
+
+                <div class="why-text">
+                    The accelerator requests
+                    {recommended_weight_bits}-bit neural weights,
+                    but the physically realizable representation
+                    is constrained by the selected device mapping.
+                    This configuration uses
+                    {recommended_cells_per_weight}
+                    physical memristor cells per weight.
+                </div>
+
+            </div>
+            """
+        )
+
+
+    st.write("")
+
+
+    why_row_2 = st.columns(
+        2
+    )
+
+
+    with why_row_2[0]:
+
+        render_html(
+            f"""
+            <div class="why-card">
+
+                <div class="why-kicker">
+                    Readout precision
+                </div>
+
+                <div class="why-title">
+                    {recommended_adc_bits}-bit ADC
+                </div>
+
+                <div class="why-text">
+                    ADC precision is one of the accelerator
+                    variables explored by the model.
+                    The AI selected {recommended_adc_bits} bits
+                    because this complete configuration lies in
+                    its predicted near-optimal region.
+                    This does not mean {recommended_adc_bits} bits
+                    is universally optimal for
+                    {selected_material['symbol']}.
+                </div>
+
+            </div>
+            """
+        )
+
+
+    with why_row_2[1]:
+
+        render_html(
+            f"""
+            <div class="why-card">
+
+                <div class="why-kicker">
+                    Crossbar architecture
+                </div>
+
+                <div class="why-title">
+                    {recommended_crossbar} ×
+                    {recommended_crossbar} crossbar
+                </div>
+
+                <div class="why-text">
+                    Crossbar size changes the accelerator
+                    configuration evaluated by the simulator.
+                    The model placed this
+                    {recommended_crossbar} ×
+                    {recommended_crossbar} option inside the
+                    predicted near-optimal design region for
+                    the completely held-out device.
+                </div>
+
+            </div>
+            """
+        )
+
+
+    render_html(
+        f"""
+        <div class="callout">
+
+            <strong>
+                How the final recommendation is chosen
+            </strong>
+
+            <br><br>
+
+            The Random-Forest model predicts accuracy across
+            the candidate design space. The recommender then
+            selects a lower-cost design from the
+            <strong>predicted near-optimal region</strong>,
+            rather than simply taking the configuration with
+            the single highest predicted accuracy.
+
+            <br><br>
+
+            Recorded relative hardware-cost proxy for this
+            recommendation:
+            <strong>{recommended_cost_proxy:,.0f}</strong>.
+
+        </div>
+        """
+    )
+
 
 
     # ========================================================
@@ -2890,7 +4546,7 @@ with forward_tab:
 
 
         validation_columns[1].metric(
-            "Actual Accuracy",
+            "Actual Recommended Accuracy",
             f"{recommended_actual_accuracy:.2f}%",
         )
 
@@ -2902,8 +4558,8 @@ with forward_tab:
 
 
         validation_columns[3].metric(
-            "Regret",
-            f"{recommended_regret:.2f} pp",
+            "Software Baseline",
+            f"{software_baseline_accuracy:.2f}%",
         )
 
 
@@ -2948,6 +4604,71 @@ with forward_tab:
                 </div>
                 """
             )
+
+
+        st.markdown(
+            "#### Validation Visuals"
+        )
+
+
+        visual_left, visual_right = st.columns(
+            [1.15, 0.85]
+        )
+
+
+        with visual_left:
+
+            render_accuracy_validation_chart(
+                recommended_predicted_accuracy,
+                recommended_actual_accuracy,
+                raw_best_accuracy,
+                software_baseline_accuracy,
+            )
+
+            st.caption(
+                "The y-axis is intentionally zoomed so the "
+                "small accuracy differences are readable. "
+                "The numeric labels should be used when "
+                "judging the magnitude of the differences."
+            )
+
+
+        with visual_right:
+
+            render_regret_threshold_chart(
+                recommended_regret,
+                NEAR_OPTIMAL_TOLERANCE_PP,
+            )
+
+            st.caption(
+                f"Regret = {recommended_regret:.2f} pp; "
+                f"success threshold = "
+                f"{NEAR_OPTIMAL_TOLERANCE_PP:.2f} pp. "
+                f"Result: "
+                f"{'PASS' if recommended_success else 'FAIL'}."
+            )
+
+
+        st.markdown(
+            f"#### Predicted vs Actual Across "
+            f"{configurations_per_device} Configurations"
+        )
+
+
+        render_predicted_vs_actual_chart(
+            candidate_df,
+            recommended_row,
+            raw_best_row,
+        )
+
+
+        st.caption(
+            "Each point is one accelerator configuration for "
+            "the held-out device. The dashed diagonal is ideal "
+            "prediction (predicted = actual). The diamond marks "
+            "the AI recommendation and the triangle marks the "
+            "exhaustive raw-accuracy optimum."
+        )
 
 
         comparison_rows = [
@@ -3296,6 +5017,135 @@ with evidence_tab:
     st.subheader(
         "How strong is the current evidence?"
     )
+
+
+    st.markdown(
+        "### Current Research Scope"
+    )
+
+
+    scope_columns_1 = st.columns(
+        4
+    )
+
+
+    with scope_columns_1[0]:
+
+        render_info_card(
+            "Simulation-Ready Devices",
+            independent_device_count,
+            "Independent physical devices used in the current zero-shot experiment.",
+        )
+
+
+    with scope_columns_1[1]:
+
+        render_info_card(
+            "Broader Literature Profiles",
+            literature_device_count,
+            "Literature-derived device profiles currently stored in the project database.",
+        )
+
+
+    with scope_columns_1[2]:
+
+        render_info_card(
+            "Configurations per Device",
+            configurations_per_device,
+            "Accelerator configurations evaluated for each active simulation-ready device.",
+        )
+
+
+    with scope_columns_1[3]:
+
+        render_info_card(
+            "Simulation Cases",
+            total_simulation_rows,
+            "Device-configuration simulation cases; not independent experimental devices.",
+        )
+
+
+    st.write("")
+
+
+    scope_columns_2 = st.columns(
+        4
+    )
+
+
+    with scope_columns_2[0]:
+
+        render_info_card(
+            "Workload",
+            "MNIST",
+            "Current neural-network workload used by the recorded accelerator evaluation.",
+        )
+
+
+    with scope_columns_2[1]:
+
+        render_info_card(
+            "Recommendation Model",
+            "Random Forest",
+            "Cross-device model used to predict accelerator accuracy for a completely held-out device.",
+        )
+
+
+    with scope_columns_2[2]:
+
+        render_info_card(
+            "Hardware Validation",
+            "Not yet",
+            "The current simulator has not been validated against a fabricated memristor crossbar accelerator.",
+        )
+
+
+    with scope_columns_2[3]:
+
+        render_info_card(
+            "Uncertainty",
+            "Heuristic",
+            "Random-Forest tree disagreement is shown as an uncalibrated uncertainty indicator.",
+        )
+
+
+    render_html(
+        f"""
+        <div class="callout">
+
+            <strong>
+                How to interpret the current evidence
+            </strong>
+
+            <br><br>
+
+            The project currently evaluates
+            <strong>{independent_device_count} independent
+            simulation-ready devices</strong> and
+            <strong>{total_simulation_rows} device-configuration
+            simulation cases</strong>.
+
+            <br><br>
+
+            The simulation cases are repeated accelerator designs
+            derived from those physical devices. They must not be
+            described as {total_simulation_rows} independent
+            experimental devices.
+
+            <br><br>
+
+            The present results are therefore
+            <strong>pilot proof-of-concept evidence</strong>
+            for literature-grounded device-to-accelerator
+            recommendation, not proof of broad physical
+            generalization across memristor technologies.
+
+        </div>
+        """
+    )
+
+
+    st.divider()
 
 
     evidence_metrics = st.columns(
@@ -3655,6 +5505,70 @@ with evidence_tab:
     )
 
 
+    st.divider()
+
+
+    st.markdown(
+        "### Research Upgrade Path"
+    )
+
+
+    roadmap_columns = st.columns(
+        5
+    )
+
+
+    with roadmap_columns[0]:
+
+        render_process_card(
+            "01",
+            "More Independent Devices",
+            "Expand from the current small set of simulation-ready devices to multiple independent devices per material family.",
+        )
+
+
+    with roadmap_columns[1]:
+
+        render_process_card(
+            "02",
+            "Stronger Validation",
+            "Use leave-one-device-out and leave-one-family-out testing with baseline model comparisons.",
+        )
+
+
+    with roadmap_columns[2]:
+
+        render_process_card(
+            "03",
+            "Nonidealities + Uncertainty",
+            "Add variability, noise, drift and missing-data scenarios with calibrated confidence/OOD checks.",
+        )
+
+
+    with roadmap_columns[3]:
+
+        render_process_card(
+            "04",
+            "Hardware Metrics",
+            "Extend beyond accuracy toward energy, latency, area and peripheral overhead trade-offs.",
+        )
+
+
+    with roadmap_columns[4]:
+
+        render_process_card(
+            "05",
+            "Reverse Nano-Design",
+            "Map accelerator requirements back to required device properties and match them to experimental literature devices.",
+        )
+
+
+    st.caption(
+        "These are planned research extensions. They are not presented as capabilities of the current prototype."
+    )
+
+
+
 # ============================================================
 # SOURCES AND LIMITATIONS
 # ============================================================
@@ -3733,6 +5647,113 @@ with sources_tab:
         </div>
         """
     )
+
+
+    st.divider()
+
+
+    st.markdown(
+        "### Evidence Classification"
+    )
+
+
+    input_audit_records = audit[
+
+        ~audit.apply(
+            is_integrity_check_record,
+            axis=1,
+        )
+
+    ].copy()
+
+
+    all_evidence_categories = []
+
+
+    for _, row in input_audit_records.iterrows():
+
+        all_evidence_categories.append(
+            evidence_category(
+                row.get(
+                    "value_type"
+                ),
+                simulator_value=row.get(
+                    "simulator_value"
+                ),
+                trace_value=row.get(
+                    "trace_value"
+                ),
+            )
+        )
+
+
+    all_evidence_series = pd.Series(
+        all_evidence_categories,
+        dtype="object",
+    )
+
+
+    classification_columns = st.columns(
+        4
+    )
+
+
+    classification_columns[0].metric(
+        "Reported Inputs",
+        int(
+            (
+                all_evidence_series
+                ==
+                "Reported"
+            ).sum()
+        ),
+    )
+
+
+    classification_columns[1].metric(
+        "Derived Inputs",
+        int(
+            (
+                all_evidence_series
+                ==
+                "Derived"
+            ).sum()
+        ),
+    )
+
+
+    classification_columns[2].metric(
+        "Assumed Inputs",
+        int(
+            (
+                all_evidence_series
+                ==
+                "Assumed"
+            ).sum()
+        ),
+    )
+
+
+    classification_columns[3].metric(
+        "Missing Inputs",
+        int(
+            (
+                all_evidence_series
+                ==
+                "Missing"
+            ).sum()
+        ),
+    )
+
+
+    st.caption(
+        "These counts include device/simulator inputs only. "
+        "Consistency-check rows are shown separately and are "
+        "not counted as physical input parameters. "
+        "Evidence status describes provenance, not measurement "
+        "accuracy."
+    )
+
 
 
     st.divider()
