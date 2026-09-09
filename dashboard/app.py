@@ -670,6 +670,153 @@ st.markdown(
         opacity: 0.72;
     }
 
+
+    /* --------------------------------------------------------
+       UI POLISH
+       -------------------------------------------------------- */
+
+    .pipeline-strip {
+        display: flex;
+        align-items: stretch;
+        gap: 0.55rem;
+        flex-wrap: wrap;
+        margin-top: 0.9rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .pipeline-step {
+        flex: 1 1 145px;
+        min-width: 140px;
+
+        border-radius: 14px;
+        padding: 0.85rem 0.9rem;
+
+        border:
+            1px solid
+            rgba(110, 110, 110, 0.20);
+
+        background:
+            rgba(120, 120, 120, 0.035);
+
+        text-align: center;
+
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+    }
+
+    .pipeline-step-title {
+        font-size: 0.91rem;
+        font-weight: 800;
+        line-height: 1.25;
+    }
+
+    .pipeline-step-note {
+        margin-top: 0.32rem;
+        font-size: 0.76rem;
+        opacity: 0.66;
+        line-height: 1.35;
+    }
+
+    .pipeline-arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        opacity: 0.35;
+    }
+
+    .validation-banner {
+        border-radius: 18px;
+        padding: 1.15rem 1.3rem;
+        margin-top: 0.85rem;
+        margin-bottom: 1.1rem;
+
+        border:
+            1px solid
+            rgba(110, 110, 110, 0.22);
+
+        white-space: normal !important;
+        overflow: visible !important;
+        overflow-wrap: anywhere !important;
+    }
+
+    .validation-banner.pass {
+        background:
+            linear-gradient(
+                135deg,
+                rgba(40, 150, 90, 0.12),
+                rgba(40, 150, 90, 0.035)
+            );
+
+        border-color:
+            rgba(40, 150, 90, 0.40);
+    }
+
+    .validation-banner.fail {
+        background:
+            linear-gradient(
+                135deg,
+                rgba(200, 85, 70, 0.12),
+                rgba(200, 85, 70, 0.035)
+            );
+
+        border-color:
+            rgba(200, 85, 70, 0.40);
+    }
+
+    .validation-kicker {
+        font-size: 0.72rem;
+        font-weight: 850;
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        opacity: 0.58;
+    }
+
+    .validation-result {
+        margin-top: 0.18rem;
+        font-size: 2rem;
+        font-weight: 900;
+        line-height: 1.05;
+    }
+
+    .validation-grid {
+        display: grid;
+        grid-template-columns:
+            repeat(
+                auto-fit,
+                minmax(150px, 1fr)
+            );
+
+        gap: 0.7rem;
+        margin-top: 0.9rem;
+    }
+
+    .validation-item {
+        border-radius: 12px;
+        padding: 0.75rem 0.85rem;
+
+        background:
+            rgba(120, 120, 120, 0.045);
+
+        border:
+            1px solid
+            rgba(110, 110, 110, 0.14);
+    }
+
+    .validation-item-label {
+        font-size: 0.69rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        opacity: 0.55;
+    }
+
+    .validation-item-value {
+        margin-top: 0.22rem;
+        font-size: 1.15rem;
+        font-weight: 850;
+    }
+
     </style>
     """,
     unsafe_allow_html=True,
@@ -1489,7 +1636,7 @@ def render_accuracy_validation_chart(
 
     spec = {
         "height": 320,
-        "title": "Prediction → Exhaustive Validation (zoomed accuracy scale)",
+        "title": "Prediction → Validation (zoomed accuracy scale)",
         "layer": [
             {
                 "mark": {
@@ -3044,45 +3191,101 @@ with home_tab:
 
 
     st.subheader(
-        "Current Research Snapshot"
+        "Project at a Glance"
+    )
+
+
+    render_html(
+        f"""
+        <div class="pipeline-strip">
+
+            <div class="pipeline-step">
+                <div class="pipeline-step-title">
+                    Published Experiments
+                </div>
+                <div class="pipeline-step-note">
+                    Literature-derived memristor data
+                </div>
+            </div>
+
+            <div class="pipeline-arrow">→</div>
+
+            <div class="pipeline-step">
+                <div class="pipeline-step-title">
+                    Evidence-Aware Profile
+                </div>
+                <div class="pipeline-step-note">
+                    Reported / derived / assumed / missing
+                </div>
+            </div>
+
+            <div class="pipeline-arrow">→</div>
+
+            <div class="pipeline-step">
+                <div class="pipeline-step-title">
+                    {configurations_per_device} Designs
+                </div>
+                <div class="pipeline-step-note">
+                    Accelerator design-space simulation
+                </div>
+            </div>
+
+            <div class="pipeline-arrow">→</div>
+
+            <div class="pipeline-step">
+                <div class="pipeline-step-title">
+                    Zero-Shot AI
+                </div>
+                <div class="pipeline-step-note">
+                    Recommend for a hidden device
+                </div>
+            </div>
+
+            <div class="pipeline-arrow">→</div>
+
+            <div class="pipeline-step">
+                <div class="pipeline-step-title">
+                    Exhaustive Validation
+                </div>
+                <div class="pipeline-step-note">
+                    Reveal the hidden-device ground truth
+                </div>
+            </div>
+
+        </div>
+        """
     )
 
 
     snapshot_columns = st.columns(
-        5
+        4
     )
 
 
     snapshot_columns[0].metric(
-        "Independent Physical Devices",
-        independent_device_count,
+        "Literature Profiles",
+        literature_device_count,
     )
 
 
     snapshot_columns[1].metric(
-        "Configurations per Device",
-        configurations_per_device,
+        "Simulation-Ready Devices",
+        independent_device_count,
     )
 
 
     snapshot_columns[2].metric(
-        "Simulation Cases",
-        total_simulation_rows,
+        "Designs per Device",
+        configurations_per_device,
     )
 
 
     snapshot_columns[3].metric(
-        "Near-Optimal Recommendations",
+        "Zero-Shot Near-Optimal",
         (
             f"{baseline_success_count}/"
             f"{independent_device_count}"
         ),
-    )
-
-
-    snapshot_columns[4].metric(
-        "Near-Optimal Success",
-        f"{baseline_success_rate:.0f}%",
     )
 
 
@@ -3091,31 +3294,36 @@ with home_tab:
         <div class="callout">
 
             <strong>
-                What does {baseline_success_rate:.0f}% mean?
+                Core research question
             </strong>
 
             <br><br>
 
-            The AI recommendation was within
-            {NEAR_OPTIMAL_TOLERANCE_PP:.1f}
-            percentage points of the exhaustive
-            raw-best accuracy for
-            {baseline_success_count} of the
-            {independent_device_count}
-            completely held-out devices.
+            Can design knowledge learned from other
+            literature-derived memristor devices recommend a
+            near-optimal accelerator configuration for a
+            completely unseen device?
 
             <br><br>
 
-            This is a
+            Current pilot result:
             <strong>
-                near-optimal recommendation success rate
-            </strong>,
-            not a statement that the AI is simply
-            "{baseline_success_rate:.0f}% accurate."
+                {baseline_success_count} of
+                {independent_device_count}
+                held-out devices
+            </strong>
+            were recommended within
+            <strong>
+                {NEAR_OPTIMAL_TOLERANCE_PP:.1f}
+                percentage points
+            </strong>
+            of the exhaustive raw-best accuracy.
 
         </div>
         """
     )
+
+
 
 
 # ============================================================
@@ -4563,47 +4771,84 @@ with forward_tab:
         )
 
 
-        if recommended_success:
+        validation_state = (
+            "PASS"
+            if recommended_success
+            else "FAIL"
+        )
 
-            render_html(
-                f"""
-                <div class="success-card">
 
-                    <strong>
-                        Near-optimal recommendation — PASS
-                    </strong>
+        validation_class = (
+            "pass"
+            if recommended_success
+            else "fail"
+        )
 
-                    <br><br>
 
-                    The recommendation is within
-                    {NEAR_OPTIMAL_TOLERANCE_PP:.1f}
-                    percentage points of the exhaustive
-                    raw-best accuracy.
+        threshold_margin = (
+            NEAR_OPTIMAL_TOLERANCE_PP
+            -
+            recommended_regret
+        )
+
+
+        threshold_margin_text = (
+            f"{abs(threshold_margin):.2f} pp "
+            + (
+                "inside threshold"
+                if threshold_margin >= 0
+                else "beyond threshold"
+            )
+        )
+
+
+        render_html(
+            f"""
+            <div class="validation-banner {validation_class}">
+
+                <div class="validation-kicker">
+                    Near-Optimal Validation Result
+                </div>
+
+                <div class="validation-result">
+                    {"✓" if recommended_success else "✕"}
+                    {validation_state}
+                </div>
+
+                <div class="validation-grid">
+
+                    <div class="validation-item">
+                        <div class="validation-item-label">
+                            Regret
+                        </div>
+                        <div class="validation-item-value">
+                            {recommended_regret:.2f} pp
+                        </div>
+                    </div>
+
+                    <div class="validation-item">
+                        <div class="validation-item-label">
+                            Success Threshold
+                        </div>
+                        <div class="validation-item-value">
+                            {NEAR_OPTIMAL_TOLERANCE_PP:.2f} pp
+                        </div>
+                    </div>
+
+                    <div class="validation-item">
+                        <div class="validation-item-label">
+                            Margin
+                        </div>
+                        <div class="validation-item-value">
+                            {threshold_margin_text}
+                        </div>
+                    </div>
 
                 </div>
-                """
-            )
 
-        else:
-
-            render_html(
-                f"""
-                <div class="warning-card">
-
-                    <strong>
-                        Near-optimal recommendation — FAIL
-                    </strong>
-
-                    <br><br>
-
-                    The recommendation is more than
-                    {NEAR_OPTIMAL_TOLERANCE_PP:.1f}
-                    percentage points below the exhaustive
-                    raw-best accuracy.
-
-                </div>
-                """
-            )
+            </div>
+            """
+        )
 
 
         st.markdown(
@@ -5148,30 +5393,17 @@ with evidence_tab:
     st.divider()
 
 
+    st.markdown(
+        "### Research Performance"
+    )
+
+
     evidence_metrics = st.columns(
         5
     )
 
 
     evidence_metrics[0].metric(
-        "Literature Profiles",
-        literature_device_count,
-    )
-
-
-    evidence_metrics[1].metric(
-        "Simulation-Ready Devices",
-        independent_device_count,
-    )
-
-
-    evidence_metrics[2].metric(
-        "Simulation Cases",
-        total_simulation_rows,
-    )
-
-
-    evidence_metrics[3].metric(
         "Near-Optimal Success",
         (
             f"{baseline_success_count}/"
@@ -5180,35 +5412,37 @@ with evidence_tab:
     )
 
 
-    evidence_metrics[4].metric(
+    evidence_metrics[1].metric(
         "Mean Regret",
         f"{baseline_mean_regret:.3f} pp",
     )
 
 
-    render_html(
-        f"""
-        <div class="callout">
+    evidence_metrics[2].metric(
+        "Near-Region MAE",
+        f"{near_region_mae:.3f} pp",
+    )
 
-            The project contains
-            <strong>
-                {total_simulation_rows}
-                device-configuration simulation cases
-            </strong>,
-            but those cases come from only
-            <strong>
-                {independent_device_count}
-                independent physical devices
-            </strong>.
 
-            <br><br>
+    evidence_metrics[3].metric(
+        "Near-Region RMSE",
+        f"{near_region_rmse:.3f} pp",
+    )
 
-            The current results are therefore treated as
-            pilot proof-of-concept evidence rather than proof
-            of broad cross-device generalization.
 
-        </div>
-        """
+    evidence_metrics[4].metric(
+        "Cost-Aware Top 3",
+        (
+            f"{baseline_top3_count}/"
+            f"{independent_device_count}"
+        ),
+    )
+
+
+    st.caption(
+        "These metrics summarize the current zero-shot pilot "
+        "experiment. They should be interpreted together with "
+        "the small number of independent physical devices."
     )
 
 
@@ -5460,49 +5694,56 @@ with evidence_tab:
 
 
     st.markdown(
-        "### Prediction Quality"
+        "### Search-Efficiency Context"
     )
 
 
-    quality_columns = st.columns(
-        4
+    search_context_columns = st.columns(
+        [0.30, 0.70]
     )
 
 
-    quality_columns[0].metric(
-        "Near-Region MAE",
-        f"{near_region_mae:.3f} pp",
-    )
+    with search_context_columns[0]:
+
+        render_info_card(
+            "Search Reduction",
+            f"{search_reduction_pct:.2f}%",
+            (
+                "One selected configuration instead of "
+                f"exhaustively evaluating all "
+                f"{configurations_per_device} candidates "
+                "for the unseen device."
+            ),
+        )
 
 
-    quality_columns[1].metric(
-        "Near-Region RMSE",
-        f"{near_region_rmse:.3f} pp",
-    )
+    with search_context_columns[1]:
 
+        render_html(
+            f"""
+            <div class="callout">
 
-    quality_columns[2].metric(
-        "Cost-Aware Top 3",
-        (
-            f"{baseline_top3_count}/"
-            f"{independent_device_count}"
-        ),
-    )
+                <strong>
+                    Important interpretation
+                </strong>
 
+                <br><br>
 
-    quality_columns[3].metric(
-        "Search Reduction",
-        f"{search_reduction_pct:.2f}%",
-    )
+                Search reduction describes how many
+                unseen-device configurations would need direct
+                evaluation after the recommendation.
 
+                <br><br>
 
-    st.caption(
-        "Search reduction means evaluating one selected "
-        "configuration for an unseen device instead of "
-        f"exhaustively evaluating all "
-        f"{configurations_per_device}. "
-        "It is not a claim about total computational cost."
-    )
+                It is
+                <strong>not</strong>
+                a claim that the full research workflow,
+                training process or simulator computation is
+                {search_reduction_pct:.2f}% cheaper.
+
+            </div>
+            """
+        )
 
 
     st.divider()
