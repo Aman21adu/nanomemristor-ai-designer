@@ -33,10 +33,7 @@ MANIFEST_FILE = (
 
 
 # ============================================================
-# Expected validated devices
-#
-# These should match the devices currently included in
-# all_device_config_results.csv.
+# Expected validated device profiles
 # ============================================================
 
 EXPECTED_DEVICES = {
@@ -46,22 +43,15 @@ EXPECTED_DEVICES = {
     "HfOx_02",
     "TiOx_03",
 
+    "TiOx_02_Au",
+    "TiOx_02_Ni",
+    "TiOx_02_Pt",
+
 }
 
 
 # ============================================================
 # Expected accelerator configuration space
-#
-# IMPORTANT:
-#
-# Do NOT hard-code 64, 245, or any future configuration count.
-#
-# The authoritative configuration grid comes from:
-#
-#     src/config_space.py
-#
-# This allows future configuration-space expansion without
-# manually changing this file again.
 # ============================================================
 
 EXPECTED_CONFIGS = generate_configs()
@@ -128,12 +118,13 @@ EXPECTED_TOTAL_ROWS = (
 
 
 # ============================================================
-# Required device-profile columns
+# Required columns
 # ============================================================
 
 DEVICE_REQUIRED_COLUMNS = [
 
     "device_id",
+    "study_id",
     "technology_family",
     "ron_ohm",
     "roff_ohm",
@@ -145,13 +136,10 @@ DEVICE_REQUIRED_COLUMNS = [
 ]
 
 
-# ============================================================
-# Required simulator-result columns
-# ============================================================
-
 RESULT_REQUIRED_COLUMNS = [
 
     "device_id",
+    "study_id",
     "technology_family",
 
     "conductance_mode",
@@ -179,6 +167,26 @@ RESULT_REQUIRED_COLUMNS = [
     "relative_hardware_cost_proxy",
 
 ]
+
+
+# ============================================================
+# Helpers
+# ============================================================
+
+def clean_text(
+    value
+):
+
+    if pd.isna(
+        value
+    ):
+
+        return ""
+
+
+    return str(
+        value
+    ).strip()
 
 
 # ============================================================
@@ -260,7 +268,8 @@ used_devices = set(
 
 if (
     used_devices
-    != EXPECTED_DEVICES
+    !=
+    EXPECTED_DEVICES
 ):
 
     raise ValueError(
@@ -273,8 +282,7 @@ if (
 
 
 # ============================================================
-# Every device must contribute the complete configuration
-# space currently defined in config_space.py.
+# Complete configuration space per device
 # ============================================================
 
 rows_per_device = (
@@ -315,8 +323,7 @@ for device_id in EXPECTED_DEVICES:
 
 
 # ============================================================
-# Ensure there are no duplicate accelerator configurations
-# inside one device.
+# Duplicate configuration check
 # ============================================================
 
 duplicate_count = results.duplicated(
@@ -344,15 +351,7 @@ if duplicate_count > 0:
 
 
 # ============================================================
-# Verify that every device contains the exact configuration
-# grid defined by config_space.py.
-#
-# This is stronger than checking the row count alone.
-#
-# Example:
-# 245 rows with one missing configuration and one wrong
-# configuration would still have the correct row count.
-# This check catches that problem.
+# Exact configuration-grid check
 # ============================================================
 
 for device_id in EXPECTED_DEVICES:
@@ -429,32 +428,22 @@ for device_id in EXPECTED_DEVICES:
 
         if missing_configs:
 
-            preview = sorted(
-                missing_configs
-            )[:10]
-
-
             message_lines.append(
 
                 "Missing configurations "
                 "(crossbar, weight_bits, adc_bits): "
-                f"{preview}"
+                f"{sorted(missing_configs)[:10]}"
 
             )
 
 
         if unexpected_configs:
 
-            preview = sorted(
-                unexpected_configs
-            )[:10]
-
-
             message_lines.append(
 
                 "Unexpected configurations "
                 "(crossbar, weight_bits, adc_bits): "
-                f"{preview}"
+                f"{sorted(unexpected_configs)[:10]}"
 
             )
 
@@ -469,7 +458,7 @@ for device_id in EXPECTED_DEVICES:
 
 
 # ============================================================
-# Validate total simulator-result size
+# Validate total result size
 # ============================================================
 
 if (
@@ -490,7 +479,7 @@ if (
 
 
 # ============================================================
-# Keep only devices with validated simulation results
+# Keep only validated profiles
 # ============================================================
 
 devices = devices[
@@ -504,10 +493,6 @@ devices = devices[
 ].copy()
 
 
-# ============================================================
-# Ensure exactly one profile row per device
-# ============================================================
-
 profile_counts = (
 
     devices[
@@ -518,7 +503,7 @@ profile_counts = (
 )
 
 
-duplicated_profiles = (
+bad_profile_counts = (
 
     profile_counts[
         profile_counts != 1
@@ -527,19 +512,218 @@ duplicated_profiles = (
 )
 
 
-if not duplicated_profiles.empty:
+missing_profile_ids = (
+
+    EXPECTED_DEVICES
+    -
+    set(
+        devices[
+            "device_id"
+        ].unique()
+    )
+
+)
+
+
+if (
+
+    not bad_profile_counts.empty
+
+    or
+
+    missing_profile_ids
+
+):
 
     raise ValueError(
 
         "Each simulated device must have exactly "
         "one device-profile row.\n"
-        f"{duplicated_profiles}"
+        f"Bad counts:\n{bad_profile_counts}\n"
+        f"Missing devices: {sorted(missing_profile_ids)}"
 
     )
 
 
 # ============================================================
-# Build device-level physical descriptors
+# Validate study_id
+# ============================================================
+
+devices[
+    "study_id"
+] = (
+
+    devices[
+        "study_id"
+    ]
+    .apply(
+        clean_text
+    )
+
+)
+
+
+missing_study = (
+
+    devices[
+        "study_id"
+    ]
+    ==
+    ""
+
+)
+
+
+if missing_study.any():
+
+    raise ValueError(
+
+        "Every simulated device must have a non-empty "
+        "study_id.\n"
+        f"Missing for: "
+        f"{devices.loc[missing_study, 'device_id'].tolist()}"
+
+    )
+
+
+results[
+    "study_id"
+] = (
+
+    results[
+        "study_id"
+    ]
+    .apply(
+        clean_text
+    )
+
+)
+
+
+# ============================================================
+# Cross-check profile metadata against combined results
+# ============================================================
+
+profile_metadata = (
+
+    devices[
+
+        [
+            "device_id",
+            "study_id",
+            "technology_family",
+        ]
+
+    ]
+
+    .copy()
+
+)
+
+
+result_metadata = (
+
+    results[
+
+        [
+            "device_id",
+            "study_id",
+            "technology_family",
+        ]
+
+    ]
+
+    .drop_duplicates()
+
+)
+
+
+if (
+    len(
+        result_metadata
+    )
+    !=
+    len(
+        EXPECTED_DEVICES
+    )
+):
+
+    raise ValueError(
+
+        "Combined results contain inconsistent "
+        "device/study/family metadata."
+
+    )
+
+
+metadata_check = profile_metadata.merge(
+
+    result_metadata,
+
+    on="device_id",
+
+    how="outer",
+
+    suffixes=(
+        "_profile",
+        "_result",
+    ),
+
+    indicator=True,
+
+)
+
+
+metadata_problem = (
+
+    (
+        metadata_check[
+            "_merge"
+        ]
+        !=
+        "both"
+    )
+
+    |
+
+    (
+        metadata_check[
+            "study_id_profile"
+        ]
+        !=
+        metadata_check[
+            "study_id_result"
+        ]
+    )
+
+    |
+
+    (
+        metadata_check[
+            "technology_family_profile"
+        ]
+        !=
+        metadata_check[
+            "technology_family_result"
+        ]
+    )
+
+)
+
+
+if metadata_problem.any():
+
+    raise ValueError(
+
+        "study_id or technology_family mismatch between "
+        "device_profiles.csv and combined results.\n"
+        f"{metadata_check.loc[metadata_problem].to_string(index=False)}"
+
+    )
+
+
+# ============================================================
+# Build one physical descriptor row per device
 # ============================================================
 
 device_rows = []
@@ -548,13 +732,18 @@ device_rows = []
 for _, row in devices.iterrows():
 
     device_id = str(
-        row["device_id"]
+        row[
+            "device_id"
+        ]
     )
 
 
-    # --------------------------------------------------------
-    # Resistance / ratio information
-    # --------------------------------------------------------
+    study_id = clean_text(
+        row[
+            "study_id"
+        ]
+    )
+
 
     ron = row[
         "ron_ohm"
@@ -570,19 +759,25 @@ for _, row in devices.iterrows():
 
 
     # --------------------------------------------------------
-    # Determine usable ON/OFF ratio
+    # Usable ON/OFF ratio
     #
-    # Priority:
-    #
-    # 1. directly available ratio
-    # 2. derive from ROFF / RON
-    #
-    # We do NOT invent one if neither exists.
+    # 1. use stored ratio when present
+    # 2. otherwise derive ROFF / RON
+    # 3. never invent a value
     # --------------------------------------------------------
 
     if (
-        pd.notna(ratio)
-        and float(ratio) > 0
+
+        pd.notna(
+            ratio
+        )
+
+        and
+
+        float(
+            ratio
+        ) > 0
+
     ):
 
         usable_ratio = float(
@@ -592,21 +787,41 @@ for _, row in devices.iterrows():
 
     elif (
 
-        pd.notna(ron)
+        pd.notna(
+            ron
+        )
 
-        and pd.notna(roff)
+        and
 
-        and float(ron) > 0
+        pd.notna(
+            roff
+        )
 
-        and float(roff) > 0
+        and
+
+        float(
+            ron
+        ) > 0
+
+        and
+
+        float(
+            roff
+        ) > 0
 
     ):
 
         usable_ratio = (
 
-            float(roff)
+            float(
+                roff
+            )
+
             /
-            float(ron)
+
+            float(
+                ron
+            )
 
         )
 
@@ -616,7 +831,7 @@ for _, row in devices.iterrows():
         raise ValueError(
 
             f"{device_id} has no usable "
-            f"ON/OFF ratio."
+            "ON/OFF ratio."
 
         )
 
@@ -624,23 +839,9 @@ for _, row in devices.iterrows():
     # --------------------------------------------------------
     # Physical conductance-state information
     #
-    # IMPORTANT:
-    #
-    # Missing fixed state count is NOT replaced by an
-    # invented physical state count.
-    #
-    # Instead:
-    #
-    # state_count_available = 1
-    # physical_state_count  = actual count
-    #
-    # or:
-    #
-    # state_count_available = 0
-    # physical_state_count  = 0
-    #
-    # The zero is a machine-readable placeholder only.
-    # The availability flag tells the model what it means.
+    # physical_state_count = 0 is only a machine-readable
+    # placeholder when no fixed state count is reported.
+    # state_count_available carries the meaning.
     # --------------------------------------------------------
 
     states = row[
@@ -650,16 +851,24 @@ for _, row in devices.iterrows():
 
     if (
 
-        pd.notna(states)
+        pd.notna(
+            states
+        )
 
-        and float(states) >= 2
+        and
+
+        float(
+            states
+        ) >= 2
 
     ):
 
         state_count_available = 1
 
         physical_state_count = int(
-            float(states)
+            float(
+                states
+            )
         )
 
 
@@ -669,10 +878,6 @@ for _, row in devices.iterrows():
 
         physical_state_count = 0
 
-
-    # --------------------------------------------------------
-    # Device behavior provenance
-    # --------------------------------------------------------
 
     conductance_mode = str(
 
@@ -692,20 +897,22 @@ for _, row in devices.iterrows():
     ).upper()
 
 
-    # --------------------------------------------------------
-    # Save one device descriptor row
-    # --------------------------------------------------------
-
     device_rows.append({
 
+        # Grouping/provenance only
         "device_id":
             device_id,
+
+        "study_id":
+            study_id,
 
         "technology_family":
             row[
                 "technology_family"
             ],
 
+
+        # Device features
         "device_on_off_ratio":
             usable_ratio,
 
@@ -735,8 +942,7 @@ device_features = pd.DataFrame(
 
 
 # ============================================================
-# Merge device-level X with architecture configuration Y
-# and simulated performance S.
+# Merge device-level X with architecture Y and performance S
 # ============================================================
 
 ml = results.merge(
@@ -746,6 +952,7 @@ ml = results.merge(
     on=[
 
         "device_id",
+        "study_id",
         "technology_family",
 
     ],
@@ -757,11 +964,15 @@ ml = results.merge(
 )
 
 
-# ============================================================
-# Check merged row count
-# ============================================================
-
-if len(ml) != len(results):
+if (
+    len(
+        ml
+    )
+    !=
+    len(
+        results
+    )
+):
 
     raise ValueError(
 
@@ -773,19 +984,7 @@ if len(ml) != len(results):
 
 
 # ============================================================
-# Semantic cleanup of bit-slicing information
-#
-# For non-bit-sliced architectures:
-#
-# slices_per_branch = 0
-#
-# means:
-#
-# "not applicable"
-#
-# not:
-#
-# "missing experimental data".
+# Semantic cleanup of bit-slicing
 # ============================================================
 
 ml[
@@ -810,12 +1009,11 @@ columns = [
     # ========================================================
     # GROUPING / PROVENANCE
     #
-    # These are NOT normal model features.
-    #
-    # device_id is the holdout unit.
+    # NONE of these columns are model inputs.
     # ========================================================
 
     "device_id",
+    "study_id",
     "technology_family",
 
 
@@ -843,32 +1041,24 @@ columns = [
     "precision_basis",
 
     "crossbar_size",
-
     "requested_weight_bits",
-
     "effective_weight_levels",
 
     "slices_per_branch",
-
     "physical_cells_per_weight",
 
     "adc_bits",
 
 
     # ========================================================
-    # ARCHITECTURE COST DESCRIPTORS
+    # DERIVED COST DESCRIPTORS
     #
-    # These are derived design quantities.
-    #
-    # They are NOT measured area / power / energy.
+    # NOT measured area / power / energy / latency.
     # ========================================================
 
     "estimated_memristor_cells",
-
     "estimated_physical_crossbar_tiles",
-
     "adc_levels",
-
     "relative_hardware_cost_proxy",
 
 
@@ -888,7 +1078,7 @@ ml = ml[
 
 
 # ============================================================
-# Validate that required ML fields contain no NaN
+# Required-field missing-value check
 # ============================================================
 
 missing_values = (
@@ -900,9 +1090,13 @@ missing_values = (
 )
 
 
-missing_values = missing_values[
-    missing_values > 0
-]
+missing_values = (
+
+    missing_values[
+        missing_values > 0
+    ]
+
+)
 
 
 if not missing_values.empty:
@@ -917,24 +1111,21 @@ if not missing_values.empty:
 
 
 # ============================================================
-# Important leakage checks
+# Leakage structure checks
 # ============================================================
 
-# ------------------------------------------------------------
-# device_id appears many times intentionally.
-#
-# Therefore random row-level train/test splitting would leak
-# information from the same physical device into both sets.
-# ------------------------------------------------------------
-
 if (
+
     ml[
         "device_id"
     ].nunique()
+
     >=
+
     len(
         ml
     )
+
 ):
 
     raise ValueError(
@@ -945,22 +1136,76 @@ if (
     )
 
 
+# Every device must map to exactly one study and one family.
+device_group_check = (
+
+    ml
+
+    .groupby(
+        "device_id"
+    )
+
+    .agg(
+
+        studies=(
+            "study_id",
+            "nunique",
+        ),
+
+        families=(
+            "technology_family",
+            "nunique",
+        ),
+
+    )
+
+)
+
+
+if (
+
+    (
+        device_group_check[
+            "studies"
+        ]
+        != 1
+    ).any()
+
+    or
+
+    (
+        device_group_check[
+            "families"
+        ]
+        != 1
+    ).any()
+
+):
+
+    raise ValueError(
+
+        "A device maps to multiple study IDs or "
+        "technology families."
+
+    )
+
+
 # ============================================================
 # Explicit feature roles
-#
-# This makes later scripts less likely to accidentally use
-# device_id as an AI input.
 # ============================================================
 
 GROUP_COLUMNS = [
 
     "device_id",
+    "study_id",
+    "technology_family",
 
 ]
 
 
 PROVENANCE_COLUMNS = [
 
+    "study_id",
     "technology_family",
 
 ]
@@ -968,19 +1213,12 @@ PROVENANCE_COLUMNS = [
 
 DEVICE_MODEL_FEATURES = [
 
-    "device_on_off_ratio",
-
     "device_log10_on_off_ratio",
 
     "state_count_available",
-
     "physical_state_count",
 
     "device_conductance_mode",
-
-    "device_state_count_status",
-
-    "parameter_source",
 
 ]
 
@@ -989,16 +1227,11 @@ CONFIG_MODEL_FEATURES = [
 
     "mapping_strategy",
 
-    "precision_basis",
-
     "crossbar_size",
-
     "requested_weight_bits",
-
     "effective_weight_levels",
 
     "slices_per_branch",
-
     "physical_cells_per_weight",
 
     "adc_bits",
@@ -1006,14 +1239,20 @@ CONFIG_MODEL_FEATURES = [
 ]
 
 
+MODEL_INPUT_FEATURES = (
+
+    DEVICE_MODEL_FEATURES
+    +
+    CONFIG_MODEL_FEATURES
+
+)
+
+
 COST_COLUMNS = [
 
     "estimated_memristor_cells",
-
     "estimated_physical_crossbar_tiles",
-
     "adc_levels",
-
     "relative_hardware_cost_proxy",
 
 ]
@@ -1034,8 +1273,11 @@ TARGET_COLUMNS = [
 Path(
     "results/tables"
 ).mkdir(
+
     parents=True,
-    exist_ok=True
+
+    exist_ok=True,
+
 )
 
 
@@ -1049,10 +1291,61 @@ ml.to_csv(
 
 
 # ============================================================
+# Dataset structure
+# ============================================================
+
+device_count = int(
+
+    ml[
+        "device_id"
+    ].nunique()
+
+)
+
+
+study_count = int(
+
+    ml[
+        "study_id"
+    ].nunique()
+
+)
+
+
+family_count = int(
+
+    ml[
+        "technology_family"
+    ].nunique()
+
+)
+
+
+study_device_counts = (
+
+    ml[
+
+        [
+            "study_id",
+            "device_id",
+        ]
+
+    ]
+
+    .drop_duplicates()
+
+    .groupby(
+        "study_id"
+    )[
+        "device_id"
+    ]
+    .nunique()
+
+)
+
+
+# ============================================================
 # Save machine-readable manifest
-#
-# Later training scripts can read this instead of guessing
-# which columns are allowed as model inputs.
 # ============================================================
 
 manifest = {
@@ -1062,15 +1355,23 @@ manifest = {
 
     "rows":
         int(
-            len(ml)
+            len(
+                ml
+            )
         ),
 
+    "device_profiles":
+        device_count,
+
+    # Backward-friendly alias.
     "devices":
-        int(
-            ml[
-                "device_id"
-            ].nunique()
-        ),
+        device_count,
+
+    "distinct_source_studies":
+        study_count,
+
+    "technology_families":
+        family_count,
 
     "configurations_per_device":
         int(
@@ -1080,8 +1381,14 @@ manifest = {
     "configuration_space_source":
         "src/config_space.py",
 
-    "group_holdout_column":
+    "device_holdout_column":
         "device_id",
+
+    "study_holdout_column":
+        "study_id",
+
+    "family_holdout_column":
+        "technology_family",
 
     "group_columns":
         GROUP_COLUMNS,
@@ -1095,6 +1402,9 @@ manifest = {
     "configuration_model_features":
         CONFIG_MODEL_FEATURES,
 
+    "model_input_features":
+        MODEL_INPUT_FEATURES,
+
     "cost_columns":
         COST_COLUMNS,
 
@@ -1104,22 +1414,51 @@ manifest = {
     "recommended_target":
         "accuracy",
 
+    # Keep split_rule for downstream compatibility.
     "split_rule":
         (
-            "LEAVE_ONE_DEVICE_OUT; "
+            "STUDY_BLOCKED_LEAVE_ONE_DEVICE_OUT; "
+            "EXCLUDE_ALL_SAME_STUDY_SIBLINGS_FROM_TRAINING; "
             "NEVER_RANDOM_ROW_SPLIT"
         ),
+
+    "additional_validation_rules": [
+
+        "LEAVE_ONE_STUDY_OUT",
+
+        "LEAVE_ONE_FAMILY_OUT",
+
+    ],
 
     "important_notes": [
 
         (
-            "device_id must be used only for grouping "
-            "and held-out evaluation, not as a model feature."
+            "device_id, study_id and technology_family "
+            "are grouping/provenance variables and must "
+            "not be used as model features."
         ),
 
         (
-            "technology_family is retained for provenance "
-            "and reporting."
+            "Primary device-level evaluation must exclude "
+            "every training device sharing the held-out "
+            "device's study_id. This prevents same-study "
+            "sibling leakage."
+        ),
+
+        (
+            "TiOx_02_Au, TiOx_02_Ni and TiOx_02_Pt "
+            "are three device profiles from one experimental "
+            "study, not three independent studies."
+        ),
+
+        (
+            "Leave-one-study-out evaluates transfer to an "
+            "entire unseen experimental study."
+        ),
+
+        (
+            "Leave-one-family-out evaluates transfer to an "
+            "unseen material technology family."
         ),
 
         (
@@ -1146,9 +1485,10 @@ manifest = {
         ),
 
         (
-            "With only four physical device profiles, "
-            "this dataset is suitable for pipeline testing "
-            "but not yet for strong generalization claims."
+            "Seven device profiles from five source studies "
+            "remain a small research dataset. Results should "
+            "be presented as pilot validation rather than "
+            "proof of broad physical generalization."
         ),
 
     ],
@@ -1201,18 +1541,20 @@ print(
 
 
 print(
-    "Physical devices:",
-    ml[
-        "device_id"
-    ].nunique()
+    "Device profiles:",
+    device_count
+)
+
+
+print(
+    "Distinct source studies:",
+    study_count
 )
 
 
 print(
     "Technology families:",
-    ml[
-        "technology_family"
-    ].nunique()
+    family_count
 )
 
 
@@ -1247,6 +1589,68 @@ print(
 
 
 # ============================================================
+# Study membership
+# ============================================================
+
+print()
+
+print(
+    "STUDY MEMBERSHIP"
+)
+
+print(
+    "----------------------------------------"
+)
+
+
+study_membership = (
+
+    ml[
+
+        [
+            "study_id",
+            "device_id",
+            "technology_family",
+        ]
+
+    ]
+
+    .drop_duplicates()
+
+    .sort_values(
+
+        [
+            "study_id",
+            "device_id",
+        ]
+
+    )
+
+)
+
+
+print(
+
+    study_membership.to_string(
+        index=False
+    )
+
+)
+
+
+print()
+
+print(
+    "Devices per study:"
+)
+
+
+print(
+    study_device_counts
+)
+
+
+# ============================================================
 # Device descriptor summary
 # ============================================================
 
@@ -1263,6 +1667,7 @@ summary = (
 
         [
             "device_id",
+            "study_id",
             "technology_family",
             "device_conductance_mode",
             "device_on_off_ratio",
@@ -1333,13 +1738,13 @@ print(
 
 
 # ============================================================
-# Leakage warning
+# Split policy
 # ============================================================
 
 print()
 
 print(
-    "IMPORTANT ML SPLIT RULE"
+    "IMPORTANT ML SPLIT POLICY"
 )
 
 print(
@@ -1357,9 +1762,8 @@ print(
 
 print(
 
-    f"All {EXPECTED_CONFIGS_PER_DEVICE} "
-    "configurations of one device "
-    "must stay together."
+    f"All {EXPECTED_CONFIGS_PER_DEVICE} configurations "
+    "of one device must stay together."
 
 )
 
@@ -1368,8 +1772,15 @@ print()
 
 print(
 
-    "Required evaluation: "
-    "LEAVE ONE DEVICE OUT."
+    "PRIMARY: STUDY-BLOCKED LEAVE-ONE-DEVICE-OUT"
+
+)
+
+
+print(
+
+    "When one device is tested, every sibling device "
+    "from the same study_id is also removed from training."
 
 )
 
@@ -1378,8 +1789,14 @@ print()
 
 print(
 
-    "Example: train on ZnO_01 + TaOx_01 + HfOx_02, "
-    "then test only on TiOx_03."
+    "ADDITIONAL: LEAVE-ONE-STUDY-OUT"
+
+)
+
+
+print(
+
+    "ADDITIONAL: LEAVE-ONE-FAMILY-OUT"
 
 )
 
@@ -1387,15 +1804,6 @@ print(
 # ============================================================
 # Dataset-size limitation
 # ============================================================
-
-independent_device_count = int(
-
-    ml[
-        "device_id"
-    ].nunique()
-
-)
-
 
 print()
 
@@ -1410,9 +1818,10 @@ print(
 
 print(
 
-    f"There are {len(ml)} simulator rows, "
-    f"but only {independent_device_count} "
-    "independent physical devices."
+    f"There are {len(ml)} simulator rows generated from "
+    f"{device_count} device profiles, "
+    f"{study_count} source studies and "
+    f"{family_count} technology families."
 
 )
 
@@ -1420,22 +1829,18 @@ print(
 print(
 
     f"The {len(ml)} rows must NOT be presented as "
-    f"{len(ml)} independent device samples."
+    f"{len(ml)} independent physical-device samples."
 
 )
 
 
 print(
 
-    "This is currently a pilot dataset for validating "
-    "the zero-shot pipeline."
+    "This remains a pilot literature-to-simulator dataset "
+    "for testing cross-device and cross-family transfer."
 
 )
 
-
-# ============================================================
-# Saved files
-# ============================================================
 
 print()
 

@@ -8,20 +8,39 @@ from config_space import generate_configs
 
 
 # ============================================================
-# Validated simulation-ready devices
+# Files
+# ============================================================
+
+DEVICE_PROFILE_FILE = Path(
+    "data/device_profiles.csv"
+)
+
+SWEEP_DIRECTORY = Path(
+    "results/tables"
+)
+
+OUTPUT_FILE = SWEEP_DIRECTORY / (
+    "all_device_config_results.csv"
+)
+
+
+# ============================================================
+# Validated simulation-ready device profiles
 #
 # IMPORTANT:
 #
-# Only devices that currently have:
+# These are seven simulator-ready DEVICE PROFILES.
 #
-# 1. usable conductance-range information
-# 2. a supported simulator behavior model
-# 3. regenerated results using the current schema
+# TiOx_02_Au, TiOx_02_Ni, and TiOx_02_Pt are distinct
+# electrode/device variants from the SAME experimental study.
+# Therefore:
 #
-# are included here.
+#   device count != independent-study count
 #
-# TaOx_02 is intentionally excluded because its
-# CONTINUOUS_QUANTIZED behavior requires a dedicated
+# The study relationship is carried forward through study_id.
+#
+# TaOx_02 remains intentionally excluded because its
+# CONTINUOUS_QUANTIZED behavior needs a dedicated
 # instability/noise model.
 # ============================================================
 
@@ -32,20 +51,21 @@ VALIDATED_DEVICES = [
     "HfOx_02",
     "TiOx_03",
 
+    "TiOx_02_Au",
+    "TiOx_02_Ni",
+    "TiOx_02_Pt",
+
 ]
 
 
 # ============================================================
 # Expected accelerator configuration space
 #
-# IMPORTANT:
-#
-# Do NOT hard-code 64, 245, or any future configuration count.
-#
 # The authoritative configuration grid comes from:
 #
 #     src/config_space.py
 #
+# No configuration count is hard-coded here.
 # ============================================================
 
 EXPECTED_CONFIGS = generate_configs()
@@ -112,10 +132,10 @@ EXPECTED_TOTAL_ROWS = (
 
 
 # ============================================================
-# Expected current sweep schema
+# Required current sweep schema
 # ============================================================
 
-REQUIRED_COLUMNS = [
+REQUIRED_SWEEP_COLUMNS = [
 
     "device_id",
     "technology_family",
@@ -139,13 +159,26 @@ REQUIRED_COLUMNS = [
 
 
 # ============================================================
+# Required device-profile metadata
+# ============================================================
+
+REQUIRED_PROFILE_COLUMNS = [
+
+    "device_id",
+    "study_id",
+    "technology_family",
+
+]
+
+
+# ============================================================
 # Current neural-network architecture
 #
 # MNIST MLP:
 #
-# 784 -> 128 -> 10
+#     784 -> 128 -> 10
 #
-# Only the two Linear layers contain memristor-mapped weights.
+# Only Linear-layer weights are mapped to memristor crossbars.
 # Bias remains digital.
 # ============================================================
 
@@ -153,14 +186,11 @@ NETWORK_LAYERS = [
 
     # input_features, output_features
     (784, 128),
+
     (128, 10),
 
 ]
 
-
-# ------------------------------------------------------------
-# Total neural-network weights stored in crossbars
-# ------------------------------------------------------------
 
 TOTAL_NETWORK_WEIGHTS = sum(
 
@@ -174,38 +204,35 @@ TOTAL_NETWORK_WEIGHTS = sum(
 
 
 # ============================================================
-# Crossbar tile calculation
+# Helpers
 # ============================================================
+
+def clean_text(
+    value
+):
+
+    if pd.isna(
+        value
+    ):
+
+        return ""
+
+
+    return str(
+        value
+    ).strip()
+
 
 def calculate_base_crossbar_tiles(
     crossbar_size
 ):
 
     """
+    Number of square crossbar tiles required for the two
+    Linear layers for ONE physical conductance plane.
 
-    Calculate how many square crossbar tiles are required
-    for the two neural-network Linear layers for ONE
-    physical conductance plane.
-
-    Example:
-
-    For each layer:
-
-        row tiles
-        =
-        ceil(input_features / crossbar_size)
-
-        column tiles
-        =
-        ceil(output_features / crossbar_size)
-
-        tile count
-        =
-        row tiles * column tiles
-
-    The result does NOT yet include differential branches
-    or binary bit slices.
-
+    Differential branches / bit-sliced planes are added later
+    through physical_cells_per_weight.
     """
 
     total_tiles = 0
@@ -248,13 +275,205 @@ def calculate_base_crossbar_tiles(
 
 
 # ============================================================
+# Load device-profile metadata
+# ============================================================
+
+if not DEVICE_PROFILE_FILE.exists():
+
+    raise FileNotFoundError(
+
+        f"Missing device profile file: "
+        f"{DEVICE_PROFILE_FILE}"
+
+    )
+
+
+profiles = pd.read_csv(
+    DEVICE_PROFILE_FILE
+)
+
+
+missing_profile_columns = [
+
+    column
+
+    for column
+    in REQUIRED_PROFILE_COLUMNS
+
+    if column
+    not in profiles.columns
+
+]
+
+
+if missing_profile_columns:
+
+    raise ValueError(
+
+        "device_profiles.csv is missing columns:\n"
+        f"{missing_profile_columns}"
+
+    )
+
+
+validated_profiles = profiles[
+
+    profiles[
+        "device_id"
+    ].isin(
+        VALIDATED_DEVICES
+    )
+
+].copy()
+
+
+profile_counts = (
+
+    validated_profiles[
+        "device_id"
+    ]
+    .value_counts()
+
+)
+
+
+missing_profile_devices = [
+
+    device_id
+
+    for device_id
+    in VALIDATED_DEVICES
+
+    if int(
+        profile_counts.get(
+            device_id,
+            0
+        )
+    ) != 1
+
+]
+
+
+if missing_profile_devices:
+
+    raise ValueError(
+
+        "Every validated device must have exactly one "
+        "device-profile row.\n"
+        "Problem devices: "
+        f"{missing_profile_devices}"
+
+    )
+
+
+validated_profiles[
+    "study_id"
+] = (
+
+    validated_profiles[
+        "study_id"
+    ]
+    .apply(
+        clean_text
+    )
+
+)
+
+
+missing_study_ids = (
+
+    validated_profiles[
+        "study_id"
+    ]
+    ==
+    ""
+
+)
+
+
+if missing_study_ids.any():
+
+    bad_devices = (
+
+        validated_profiles.loc[
+
+            missing_study_ids,
+
+            "device_id",
+
+        ]
+        .tolist()
+
+    )
+
+
+    raise ValueError(
+
+        "Validated devices must have non-empty study_id "
+        "values.\n"
+        f"Missing study_id for: {bad_devices}"
+
+    )
+
+
+profile_metadata = (
+
+    validated_profiles[
+
+        [
+            "device_id",
+            "study_id",
+            "technology_family",
+        ]
+
+    ]
+
+    .copy()
+
+)
+
+
+study_by_device = dict(
+
+    zip(
+
+        profile_metadata[
+            "device_id"
+        ],
+
+        profile_metadata[
+            "study_id"
+        ],
+
+    )
+
+)
+
+
+family_by_device = dict(
+
+    zip(
+
+        profile_metadata[
+            "device_id"
+        ],
+
+        profile_metadata[
+            "technology_family"
+        ],
+
+    )
+
+)
+
+
+# ============================================================
 # Build sweep-file list
 # ============================================================
 
 files = [
 
-    Path(
-        "results/tables/"
+    SWEEP_DIRECTORY / (
         f"{device_id}_config_sweep.csv"
     )
 
@@ -305,7 +524,7 @@ for path in files:
         column
 
         for column
-        in REQUIRED_COLUMNS
+        in REQUIRED_SWEEP_COLUMNS
 
         if column
         not in df.columns
@@ -325,8 +544,7 @@ for path in files:
 
 
     # --------------------------------------------------------
-    # Each current device sweep must contain the complete
-    # configuration space defined in config_space.py.
+    # Complete configuration count
     # --------------------------------------------------------
 
     if (
@@ -347,7 +565,7 @@ for path in files:
 
 
     # --------------------------------------------------------
-    # Make sure one file contains only one device
+    # One file -> one device
     # --------------------------------------------------------
 
     unique_devices = (
@@ -373,7 +591,7 @@ for path in files:
         )
 
 
-    file_device = (
+    file_device = str(
         unique_devices[0]
     )
 
@@ -405,7 +623,60 @@ for path in files:
 
 
     # --------------------------------------------------------
-    # Check that accelerator configurations are unique
+    # Family in sweep must agree with profile metadata
+    # --------------------------------------------------------
+
+    unique_families = (
+
+        df[
+            "technology_family"
+        ]
+        .dropna()
+        .astype(str)
+        .unique()
+
+    )
+
+
+    if len(
+        unique_families
+    ) != 1:
+
+        raise ValueError(
+
+            f"{path} must contain exactly one "
+            "technology_family."
+
+        )
+
+
+    expected_family = str(
+        family_by_device[
+            file_device
+        ]
+    )
+
+
+    if (
+        str(
+            unique_families[0]
+        )
+        !=
+        expected_family
+    ):
+
+        raise ValueError(
+
+            f"Technology-family mismatch for "
+            f"{file_device}.\n"
+            f"Profile: {expected_family}\n"
+            f"Sweep:   {unique_families[0]}"
+
+        )
+
+
+    # --------------------------------------------------------
+    # Accelerator configurations must be unique
     # --------------------------------------------------------
 
     duplicate_configs = df.duplicated(
@@ -433,10 +704,7 @@ for path in files:
 
 
     # --------------------------------------------------------
-    # Verify that the file contains the EXACT configuration
-    # grid defined by config_space.py.
-    #
-    # This is stronger than checking the row count alone.
+    # Exact configuration grid
     # --------------------------------------------------------
 
     actual_config_keys = {
@@ -500,32 +768,22 @@ for path in files:
 
         if missing_configs:
 
-            preview = sorted(
-                missing_configs
-            )[:10]
-
-
             message_lines.append(
 
                 "Missing configurations "
                 "(crossbar, weight_bits, adc_bits): "
-                f"{preview}"
+                f"{sorted(missing_configs)[:10]}"
 
             )
 
 
         if unexpected_configs:
 
-            preview = sorted(
-                unexpected_configs
-            )[:10]
-
-
             message_lines.append(
 
                 "Unexpected configurations "
                 "(crossbar, weight_bits, adc_bits): "
-                f"{preview}"
+                f"{sorted(unexpected_configs)[:10]}"
 
             )
 
@@ -540,8 +798,82 @@ for path in files:
 
 
     # --------------------------------------------------------
-    # Append validated sweep
+    # study_id is provenance/grouping metadata.
+    #
+    # It is attached here from the evidence-aware device
+    # profile rather than duplicated manually in each sweep.
     # --------------------------------------------------------
+
+    if (
+        "study_id"
+        in df.columns
+    ):
+
+        existing_studies = (
+
+            df[
+                "study_id"
+            ]
+            .dropna()
+            .astype(str)
+            .str.strip()
+            .unique()
+
+        )
+
+
+        if (
+
+            len(
+                existing_studies
+            ) > 0
+
+            and
+
+            (
+                len(
+                    existing_studies
+                ) != 1
+
+                or
+
+                existing_studies[0]
+                !=
+                study_by_device[
+                    file_device
+                ]
+            )
+
+        ):
+
+            raise ValueError(
+
+                f"Conflicting study_id values in {path}."
+
+            )
+
+
+        df[
+            "study_id"
+        ] = study_by_device[
+            file_device
+        ]
+
+
+    else:
+
+        df.insert(
+
+            1,
+
+            "study_id",
+
+            study_by_device[
+                file_device
+            ],
+
+        )
+
 
     dataframes.append(
         df
@@ -579,7 +911,7 @@ for (
         raise ValueError(
 
             f"{device_id} does not have the same "
-            f"column order as the other sweep files."
+            "column order as the other sweep files."
 
         )
 
@@ -598,7 +930,7 @@ combined = pd.concat(
 
 
 # ============================================================
-# Validate combined size
+# Validate combined structure
 # ============================================================
 
 if (
@@ -618,44 +950,39 @@ if (
     )
 
 
+combined_devices = set(
+
+    combined[
+        "device_id"
+    ].unique()
+
+)
+
+
+if (
+    combined_devices
+    !=
+    set(
+        VALIDATED_DEVICES
+    )
+):
+
+    raise ValueError(
+
+        "Combined device set does not match "
+        "VALIDATED_DEVICES."
+
+    )
+
+
 # ============================================================
 # Architecture-level quantities
 # ============================================================
-
-# ------------------------------------------------------------
-# Total neural-network weights
-#
-# Same model for every configuration.
-# ------------------------------------------------------------
 
 combined[
     "network_weight_count"
 ] = TOTAL_NETWORK_WEIGHTS
 
-
-# ------------------------------------------------------------
-# Estimated number of actual memristor cells required
-#
-# neural-network weights
-# x
-# physical cells per weight
-#
-# Examples:
-#
-# single differential pair:
-#
-#   101632 x 2
-#
-# binary W=4:
-#
-#   101632 x 6
-#
-# binary W=6:
-#
-#   101632 x 10
-#
-# This excludes spare/redundant cells and peripheral circuits.
-# ------------------------------------------------------------
 
 combined[
     "estimated_memristor_cells"
@@ -673,43 +1000,20 @@ combined[
 )
 
 
-# ------------------------------------------------------------
-# Number of square crossbar tiles needed for ONE
-# conductance plane.
-# ------------------------------------------------------------
-
 combined[
     "base_crossbar_tiles"
-] = combined[
+] = (
 
-    "crossbar_size"
+    combined[
+        "crossbar_size"
+    ]
 
-].apply(
-
-    calculate_base_crossbar_tiles
+    .apply(
+        calculate_base_crossbar_tiles
+    )
 
 )
 
-
-# ------------------------------------------------------------
-# Estimated physical crossbar tiles
-#
-# Includes:
-#
-# differential branches
-#
-# and, for binary devices,
-# multiple bit-sliced planes.
-#
-# Example:
-#
-# physical_cells_per_weight = 2
-#
-# means two physical conductance planes:
-#
-# G+
-# G-
-# ------------------------------------------------------------
 
 combined[
     "estimated_physical_crossbar_tiles"
@@ -727,20 +1031,6 @@ combined[
 )
 
 
-# ------------------------------------------------------------
-# ADC quantization levels
-#
-# 4 bit  -> 16
-# 5 bit  -> 32
-# 6 bit  -> 64
-# 7 bit  -> 128
-# 8 bit  -> 256
-# 9 bit  -> 512
-# 10 bit -> 1024
-#
-# This is NOT an ADC area or power estimate.
-# ------------------------------------------------------------
-
 combined[
     "adc_levels"
 ] = (
@@ -756,26 +1046,8 @@ combined[
 
 # ============================================================
 # Heuristic architecture-cost proxy
-# ============================================================
 #
-# IMPORTANT:
-#
-# This is NOT:
-#
-#   measured power
-#   measured energy
-#   measured area
-#   measured latency
-#
-# It is only a relative design-space proxy.
-#
-# It increases when:
-#
-# - more physical crossbar planes/tiles are needed
-# - ADC precision increases
-#
-# We keep this explicitly labeled as a proxy so it cannot
-# accidentally be presented as real hardware energy or area.
+# NOT measured power / energy / area / latency.
 # ============================================================
 
 combined[
@@ -798,17 +1070,18 @@ combined[
 # Save combined dataset
 # ============================================================
 
-output = Path(
+SWEEP_DIRECTORY.mkdir(
 
-    "results/tables/"
-    "all_device_config_results.csv"
+    parents=True,
+
+    exist_ok=True,
 
 )
 
 
 combined.to_csv(
 
-    output,
+    OUTPUT_FILE,
 
     index=False
 
@@ -818,6 +1091,33 @@ combined.to_csv(
 # ============================================================
 # Summary
 # ============================================================
+
+device_count = int(
+
+    combined[
+        "device_id"
+    ].nunique()
+
+)
+
+
+study_count = int(
+
+    combined[
+        "study_id"
+    ].nunique()
+
+)
+
+
+family_count = int(
+
+    combined[
+        "technology_family"
+    ].nunique()
+
+)
+
 
 print()
 
@@ -831,10 +1131,20 @@ print(
 
 
 print(
-    "Devices:",
-    len(
-        VALIDATED_DEVICES
-    )
+    "Device profiles:",
+    device_count
+)
+
+
+print(
+    "Distinct source studies:",
+    study_count
+)
+
+
+print(
+    "Technology families:",
+    family_count
 )
 
 
@@ -897,13 +1207,74 @@ print(
 
 
 # ============================================================
+# Study structure
+# ============================================================
+
+print()
+
+print(
+    "STUDY GROUPS"
+)
+
+print(
+    "----------------------------------------"
+)
+
+
+study_structure = (
+
+    combined[
+
+        [
+            "device_id",
+            "study_id",
+            "technology_family",
+        ]
+
+    ]
+
+    .drop_duplicates()
+
+    .sort_values(
+
+        [
+            "study_id",
+            "device_id",
+        ]
+
+    )
+
+)
+
+
+print(
+
+    study_structure.to_string(
+        index=False
+    )
+
+)
+
+
+print()
+
+print(
+
+    "NOTE: TiOx_02_Au, TiOx_02_Ni and TiOx_02_Pt "
+    "are distinct device profiles from one study; "
+    "they are not counted as three independent studies."
+
+)
+
+
+# ============================================================
 # Mapping strategies
 # ============================================================
 
 print()
 
 print(
-    "Mapping strategies:"
+    "MAPPING STRATEGIES"
 )
 
 
@@ -916,14 +1287,16 @@ print(
             "conductance_mode",
             "mapping_strategy",
             "precision_basis",
-
         ]
 
     ]
+
     .drop_duplicates()
+
     .sort_values(
         "device_id"
     )
+
     .to_string(
         index=False
     )
@@ -934,12 +1307,8 @@ print(
 # ============================================================
 # Best raw-accuracy configuration per device
 #
-# IMPORTANT:
-#
-# This is only maximum simulated accuracy.
-#
-# It is NOT yet the final accelerator optimum because
-# hardware cost must later be included in the objective.
+# This is maximum simulated accuracy only.
+# It is NOT yet a measured-hardware optimum.
 # ============================================================
 
 best_accuracy = (
@@ -951,13 +1320,12 @@ best_accuracy = (
         [
             "accuracy",
             "relative_hardware_cost_proxy",
-
         ],
 
         ascending=[
             False,
             True,
-        ]
+        ],
 
     )
 
@@ -978,7 +1346,7 @@ print(
 )
 
 print(
-    "(not yet cost-aware optimum)"
+    "(not yet cost-aware measured-hardware optimum)"
 )
 
 
@@ -988,6 +1356,7 @@ print(
 
         [
             "device_id",
+            "study_id",
             "technology_family",
             "mapping_strategy",
             "crossbar_size",
@@ -1000,7 +1369,6 @@ print(
             "estimated_memristor_cells",
             "estimated_physical_crossbar_tiles",
             "relative_hardware_cost_proxy",
-
         ]
 
     ].to_string(
@@ -1010,13 +1378,9 @@ print(
 )
 
 
-# ============================================================
-# Save confirmation
-# ============================================================
-
 print()
 
 print(
     "Saved to:",
-    output
+    OUTPUT_FILE
 )

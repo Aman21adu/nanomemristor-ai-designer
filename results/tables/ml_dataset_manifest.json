@@ -1,28 +1,45 @@
 {
     "dataset_file": "results/tables/ml_dataset.csv",
-    "rows": 980,
-    "devices": 4,
+    "rows": 1715,
+    "device_profiles": 7,
+    "devices": 7,
+    "distinct_source_studies": 5,
+    "technology_families": 4,
     "configurations_per_device": 245,
     "configuration_space_source": "src/config_space.py",
-    "group_holdout_column": "device_id",
+    "device_holdout_column": "device_id",
+    "study_holdout_column": "study_id",
+    "family_holdout_column": "technology_family",
     "group_columns": [
-        "device_id"
+        "device_id",
+        "study_id",
+        "technology_family"
     ],
     "provenance_columns": [
+        "study_id",
         "technology_family"
     ],
     "device_model_features": [
-        "device_on_off_ratio",
+        "device_log10_on_off_ratio",
+        "state_count_available",
+        "physical_state_count",
+        "device_conductance_mode"
+    ],
+    "configuration_model_features": [
+        "mapping_strategy",
+        "crossbar_size",
+        "requested_weight_bits",
+        "effective_weight_levels",
+        "slices_per_branch",
+        "physical_cells_per_weight",
+        "adc_bits"
+    ],
+    "model_input_features": [
         "device_log10_on_off_ratio",
         "state_count_available",
         "physical_state_count",
         "device_conductance_mode",
-        "device_state_count_status",
-        "parameter_source"
-    ],
-    "configuration_model_features": [
         "mapping_strategy",
-        "precision_basis",
         "crossbar_size",
         "requested_weight_bits",
         "effective_weight_levels",
@@ -41,14 +58,21 @@
         "accuracy_loss"
     ],
     "recommended_target": "accuracy",
-    "split_rule": "LEAVE_ONE_DEVICE_OUT; NEVER_RANDOM_ROW_SPLIT",
+    "split_rule": "STUDY_BLOCKED_LEAVE_ONE_DEVICE_OUT; EXCLUDE_ALL_SAME_STUDY_SIBLINGS_FROM_TRAINING; NEVER_RANDOM_ROW_SPLIT",
+    "additional_validation_rules": [
+        "LEAVE_ONE_STUDY_OUT",
+        "LEAVE_ONE_FAMILY_OUT"
+    ],
     "important_notes": [
-        "device_id must be used only for grouping and held-out evaluation, not as a model feature.",
-        "technology_family is retained for provenance and reporting.",
+        "device_id, study_id and technology_family are grouping/provenance variables and must not be used as model features.",
+        "Primary device-level evaluation must exclude every training device sharing the held-out device's study_id. This prevents same-study sibling leakage.",
+        "TiOx_02_Au, TiOx_02_Ni and TiOx_02_Pt are three device profiles from one experimental study, not three independent studies.",
+        "Leave-one-study-out evaluates transfer to an entire unseen experimental study.",
+        "Leave-one-family-out evaluates transfer to an unseen material technology family.",
         "The configuration count is read dynamically from src/config_space.py.",
         "physical_state_count=0 means no fixed physical state count is available; consult state_count_available.",
         "effective_weight_levels describes accelerator mapping precision, not necessarily the physical state count of one memristor.",
         "relative_hardware_cost_proxy is heuristic and must not be reported as measured energy, power, latency, or silicon area.",
-        "With only four physical device profiles, this dataset is suitable for pipeline testing but not yet for strong generalization claims."
+        "Seven device profiles from five source studies remain a small research dataset. Results should be presented as pilot validation rather than proof of broad physical generalization."
     ]
 }
