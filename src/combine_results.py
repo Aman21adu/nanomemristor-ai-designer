@@ -39,6 +39,12 @@ OUTPUT_FILE = SWEEP_DIRECTORY / (
 #
 # The study relationship is carried forward through study_id.
 #
+# HfOx_01 uses the 2024 variability paper as its PRIMARY
+# study_id. Its GRADUAL_MULTILEVEL behavior has additional
+# same-stack literature support recorded at property level in
+# source_traceability.csv; that supporting paper is not treated
+# as a second physical profile or a second primary study here.
+#
 # TaOx_02 remains intentionally excluded because its
 # CONTINUOUS_QUANTIZED behavior needs a dedicated
 # instability/noise model.
@@ -48,7 +54,10 @@ VALIDATED_DEVICES = [
 
     "ZnO_01",
     "TaOx_01",
+
+    "HfOx_01",
     "HfOx_02",
+
     "TiOx_03",
 
     "TiOx_02_Au",

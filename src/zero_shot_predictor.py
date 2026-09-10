@@ -3812,6 +3812,17 @@ print(
 )
 
 
+if "HfOx_01" in set(df["device_id"].astype(str)):
+
+    print(
+
+        "HfOx_01 uses its 2024 variability paper as the "
+        "primary study_id; same-stack multilevel behavior "
+        "support is retained separately in provenance."
+
+    )
+
+
 print(
 
     "The primary split blocks same-study siblings from "

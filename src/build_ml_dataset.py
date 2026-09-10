@@ -40,7 +40,10 @@ EXPECTED_DEVICES = {
 
     "ZnO_01",
     "TaOx_01",
+
+    "HfOx_01",
     "HfOx_02",
+
     "TiOx_03",
 
     "TiOx_02_Au",
@@ -1449,6 +1452,13 @@ manifest = {
             "TiOx_02_Au, TiOx_02_Ni and TiOx_02_Pt "
             "are three device profiles from one experimental "
             "study, not three independent studies."
+        ),
+
+        (
+            "HfOx_01 keeps the 2024 variability paper as its "
+            "primary study_id. Its GRADUAL_MULTILEVEL "
+            "classification has separate same-stack supporting "
+            "literature recorded in source_traceability.csv."
         ),
 
         (
