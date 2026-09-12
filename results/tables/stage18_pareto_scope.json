@@ -1,0 +1,28 @@
+{
+  "stage": 18,
+  "title": "Zero-shot Pareto frontier transfer",
+  "research_question": "Can a model trained on other experimentally reported memristor studies reconstruct the accuracy-versus-relative-cost trade-off frontier of a held-out device before seeing its simulation results?",
+  "rows": 2450,
+  "devices": 10,
+  "studies": 8,
+  "families": 5,
+  "cost_axis": "relative_hardware_cost_proxy",
+  "split_policy": "For each held-out device, all rows from that device's source study are excluded from training.",
+  "models": {
+    "HARDWARE_ONLY": "Independent accelerator controls only.",
+    "FULL_DEVICE_AWARE": "Current full device-aware feature set."
+  },
+  "metrics": {
+    "pareto_recall": "Fraction of true Pareto configurations also present on the predicted frontier.",
+    "pareto_precision": "Fraction of predicted Pareto configurations that are truly Pareto-optimal.",
+    "normalized_front_distance": "Symmetric nearest-neighbor distance between predicted and true frontiers after normalizing cost and accuracy within each held-out device.",
+    "hypervolume_abs_error": "Absolute difference in bounded normalized 2D hypervolume. Descriptive only.",
+    "cost_budget_regret": "At several cost budgets, actual accuracy loss from choosing the configuration with highest predicted accuracy versus the true best configuration under the same budget."
+  },
+  "important_limits": [
+    "The cost axis is the project's relative hardware-cost proxy; it is not measured energy, area, latency, power, or monetary cost.",
+    "Exact Pareto overlap is intentionally strict; nearby frontier points can still be useful even if exact configuration overlap is low.",
+    "The study contains only 10 device profiles from 8 independent primary studies and 5 technology families, so conclusions are pilot-scale.",
+    "This stage tests transfer of a simulated architecture trade-off surface, not universal physical generalization across all memristor technologies."
+  ]
+}
