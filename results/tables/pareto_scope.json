@@ -1,0 +1,20 @@
+{
+  "stage": 11,
+  "name": "Hardware-cost / accuracy Pareto analysis",
+  "objectives": {
+    "maximize": "simulated accuracy",
+    "minimize": "relative_hardware_cost_proxy"
+  },
+  "important_limits": [
+    "relative_hardware_cost_proxy is a heuristic, not measured energy, area, latency, power, or monetary cost",
+    "Pareto fronts are computed from existing simulator outputs, not physical measurements",
+    "the cheapest-within-0.5pp reference uses TRUE simulated accuracy and is therefore an oracle/reference benchmark, not an unseen-device ML recommendation",
+    "do not use this stage to claim measured hardware efficiency"
+  ],
+  "accuracy_tolerance_pp": 0.5,
+  "outputs": [
+    "results\\tables\\pareto_front_by_device.csv",
+    "results\\tables\\pareto_summary_by_device.csv",
+    "results\\tables\\pareto_overview.csv"
+  ]
+}

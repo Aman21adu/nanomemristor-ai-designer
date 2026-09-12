@@ -1,0 +1,8 @@
+metric,value
+device_profiles,10.0
+simulator_rows_reused,2450.0
+median_pareto_points_per_device,10.5
+mean_pareto_points_per_device,10.7
+median_0p5pp_cost_reduction_vs_best_pct,96.48008241758242
+mean_0p5pp_cost_reduction_vs_best_pct,90.90807005494506
+max_0p5pp_cost_reduction_vs_best_pct,99.84375
