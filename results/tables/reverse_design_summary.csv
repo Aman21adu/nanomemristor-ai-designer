@@ -1,0 +1,2 @@
+target_accuracy,max_cost_proxy,max_descriptor_distance,training_rows,training_devices,searched_on_off_ratios,searched_device_templates,total_candidate_configurations,feasible_candidate_configurations,feasible_device_descriptor_sets
+95.5,5000.0,,2450,10,22,6,32340,840,84
