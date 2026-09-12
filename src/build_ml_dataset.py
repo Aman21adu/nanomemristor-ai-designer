@@ -44,6 +44,8 @@ EXPECTED_DEVICES = {
     "HfOx_01",
     "HfOx_02",
 
+    "HfZrOx_01",
+
     "TiOx_03",
 
     "TiOx_02_Au",
@@ -1459,6 +1461,13 @@ manifest = {
             "primary study_id. Its GRADUAL_MULTILEVEL "
             "classification has separate same-stack supporting "
             "literature recorded in source_traceability.csv."
+        ),
+
+        (
+            "HfZrOx_01 is an independent low-ON/OFF ANALOG "
+            "profile with reported post-wake-up ON/OFF=2.0. "
+            "Its absolute RON/ROFF are not available, so "
+            "parameter_source is normalized_from_ratio."
         ),
 
         (

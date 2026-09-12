@@ -3823,6 +3823,17 @@ if "HfOx_01" in set(df["device_id"].astype(str)):
     )
 
 
+if "HfZrOx_01" in set(df["device_id"].astype(str)):
+
+    print(
+
+        "HfZrOx_01 is an independent low-ON/OFF ANALOG "
+        "profile with reported post-wake-up ON/OFF=2.0; "
+        "absolute conductance is normalized from the ratio."
+
+    )
+
+
 print(
 
     "The primary split blocks same-study siblings from "

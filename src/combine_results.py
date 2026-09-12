@@ -45,6 +45,12 @@ OUTPUT_FILE = SWEEP_DIRECTORY / (
 # source_traceability.csv; that supporting paper is not treated
 # as a second physical profile or a second primary study here.
 #
+#
+# HfZrOx_01 is an independent 2021 primary study with
+# reported post-wake-up ON/OFF = 2.0 and ANALOG behavior.
+# Absolute RON/ROFF are unavailable, so the simulator uses
+# normalized conductance derived from the reported ratio.
+#
 # TaOx_02 remains intentionally excluded because its
 # CONTINUOUS_QUANTIZED behavior needs a dedicated
 # instability/noise model.
@@ -57,6 +63,8 @@ VALIDATED_DEVICES = [
 
     "HfOx_01",
     "HfOx_02",
+
+    "HfZrOx_01",
 
     "TiOx_03",
 
