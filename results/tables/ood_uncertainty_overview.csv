@@ -1,0 +1,7 @@
+metric,value
+device_profiles,10.0
+ood_score_vs_mean_abs_prediction_error_corr,-0.11173734758051408
+ood_score_vs_baseline_regret_corr,-0.06226677842238483
+tree_disagreement_vs_mean_abs_error_corr,0.12139361768437971
+tree_disagreement_vs_baseline_regret_corr,-0.026898459205208336
+possible_overconfident_failures,1.0
