@@ -1,0 +1,24 @@
+{
+  "stage": 16,
+  "name": "Future experimental descriptor targets / research-gap generation",
+  "minimum_gap_distance": 0.15,
+  "what_this_stage_does": [
+    "Starts from reverse-design candidates that satisfy the accelerator target.",
+    "Removes exact and near-duplicate descriptor regions already represented in the literature dataset.",
+    "Ranks remaining descriptor gaps by evidence proximity, predicted simulator performance, and heuristic cost.",
+    "Generates experimentally testable DEVICE-PROPERTY TARGETS."
+  ],
+  "what_this_stage_does_not_do": [
+    "It does not predict a new chemical composition.",
+    "It does not predict a new electrode/oxide stack.",
+    "It does not claim a novel material has been discovered.",
+    "It does not prove fabricability.",
+    "It does not replace experimental device characterization."
+  ],
+  "why_material_identity_is_not_predicted": "The current ML feature space contains device descriptors such as ON/OFF ratio, conductance mode, state count and accelerator configuration, but it does not encode sufficient composition/structure/process descriptors to learn a reliable mapping from accelerator requirements back to a new material or stack.",
+  "recommended_next_research_extension": "Add composition, electrode materials, oxide thickness, fabrication process, forming/set/reset voltages, endurance, retention, variability and temperature features across substantially more independent studies before attempting material/structure recommendation.",
+  "outputs": [
+    "results\\tables\\future_research_targets.csv",
+    "results\\tables\\future_research_target_summary.csv"
+  ]
+}

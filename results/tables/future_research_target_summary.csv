@@ -1,0 +1,9 @@
+metric,value
+feasible_reverse_design_requirements,84.0
+existing_or_near_duplicate_excluded,20.0
+future_gap_targets_retained,64.0
+tier_A_interpolative_gap_targets,9.0
+tier_B_moderate_gap_targets,12.0
+tier_C_high_extrapolation_targets,43.0
+median_gap_distance,1.4557611373742505
+max_gap_distance,2.647427621219989
