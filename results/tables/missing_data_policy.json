@@ -1,0 +1,26 @@
+{
+  "stage": 6,
+  "name": "Missing-data and scenario handling",
+  "principles": [
+    "Never silently impute a literature parameter that is not reported.",
+    "Keep reported, derived, normalized, assumed and missing information distinguishable.",
+    "A hypothetical sensitivity range is not a measured device property.",
+    "Unknown fixed state count for analog/gradual devices remains unknown in baseline results.",
+    "Normalized conductance preserves a reported ON/OFF ratio but is not evidence of absolute RON/ROFF.",
+    "Idealized mapping is a modeling assumption, not measured hardware behavior.",
+    "Noise, variability and drift are deferred to the nonideality stage unless directly supported by evidence."
+  ],
+  "hypothetical_state_count_range": [
+    2,
+    4,
+    8,
+    16,
+    32,
+    64
+  ],
+  "outputs": [
+    "results\\tables\\evidence_coverage_by_device.csv",
+    "results\\tables\\evidence_coverage_summary.csv",
+    "results\\tables\\scenario_registry.csv"
+  ]
+}

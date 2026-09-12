@@ -1,0 +1,11 @@
+metric,value
+device_profiles,10
+distinct_source_studies,8
+technology_families,5
+ratio_available_devices,10
+absolute_parameter_devices,5
+normalized_ratio_only_devices,5
+fixed_state_count_devices,2
+idealized_mapping_devices,8
+assumption_sensitive_devices,9
+literature_constrained_devices,1
