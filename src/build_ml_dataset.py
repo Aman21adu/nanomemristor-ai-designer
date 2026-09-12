@@ -47,6 +47,7 @@ EXPECTED_DEVICES = {
     "HfZrOx_01",
 
     "TiOx_03",
+    "TiOx_04",
 
     "TiOx_02_Au",
     "TiOx_02_Ni",
@@ -1468,6 +1469,16 @@ manifest = {
             "profile with reported post-wake-up ON/OFF=2.0. "
             "Its absolute RON/ROFF are not available, so "
             "parameter_source is normalized_from_ratio."
+        ),
+
+        (
+            "TiOx_04 is an independent TiOx/TiOy "
+            "GRADUAL_MULTILEVEL profile with reported "
+            "ON/OFF approximately 76 at 0.2 V. Its absolute "
+            "RON/ROFF are not available, so parameter_source "
+            "is normalized_from_ratio. Protocol-generated "
+            "multi-level states are not treated as a fixed "
+            "intrinsic physical state count."
         ),
 
         (

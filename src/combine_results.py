@@ -51,6 +51,11 @@ OUTPUT_FILE = SWEEP_DIRECTORY / (
 # Absolute RON/ROFF are unavailable, so the simulator uses
 # normalized conductance derived from the reported ratio.
 #
+# TiOx_04 is an independent TiOx/TiOy gradual-multilevel
+# synaptic study with reported ON/OFF ~76 at 0.2 V.
+# Absolute RON/ROFF are unavailable, so the simulator uses
+# normalized conductance from the reported ratio.
+#
 # TaOx_02 remains intentionally excluded because its
 # CONTINUOUS_QUANTIZED behavior needs a dedicated
 # instability/noise model.
@@ -67,6 +72,7 @@ VALIDATED_DEVICES = [
     "HfZrOx_01",
 
     "TiOx_03",
+    "TiOx_04",
 
     "TiOx_02_Au",
     "TiOx_02_Ni",

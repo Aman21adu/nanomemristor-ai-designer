@@ -3834,6 +3834,18 @@ if "HfZrOx_01" in set(df["device_id"].astype(str)):
     )
 
 
+if "TiOx_04" in set(df["device_id"].astype(str)):
+
+    print(
+
+        "TiOx_04 is an independent TiOx/TiOy "
+        "GRADUAL_MULTILEVEL profile with reported ON/OFF "
+        "approximately 76 at 0.2 V; absolute conductance "
+        "is normalized from the ratio."
+
+    )
+
+
 print(
 
     "The primary split blocks same-study siblings from "
