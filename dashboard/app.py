@@ -71,6 +71,13 @@ REVERSE_MATCH_SUMMARY_FILE = RESULTS_DIR / "reverse_design_experiment_match_summ
 FUTURE_TARGETS_FILE = RESULTS_DIR / "future_research_targets.csv"
 FUTURE_TARGET_SUMMARY_FILE = RESULTS_DIR / "future_research_target_summary.csv"
 
+STAGE17_ABLATION_SUMMARY_FILE = RESULTS_DIR / "stage17_ablation_summary.csv"
+STAGE17_ABLATION_BY_DEVICE_FILE = RESULTS_DIR / "stage17_ablation_by_device.csv"
+
+STAGE18_PARETO_TRANSFER_SUMMARY_FILE = RESULTS_DIR / "stage18_pareto_summary.csv"
+STAGE18_PARETO_TRANSFER_BY_DEVICE_FILE = RESULTS_DIR / "stage18_pareto_by_device.csv"
+STAGE18_PARETO_TRANSFER_POINTS_FILE = RESULTS_DIR / "stage18_pareto_points.csv"
+
 
 # ============================================================
 # SETTINGS
@@ -1558,6 +1565,12 @@ def load_all_data():
         "reverse_match_summary": read_csv_optional(REVERSE_MATCH_SUMMARY_FILE),
         "future_targets": read_csv_optional(FUTURE_TARGETS_FILE),
         "future_target_summary": read_csv_optional(FUTURE_TARGET_SUMMARY_FILE),
+
+        "stage17_ablation_summary": read_csv_optional(STAGE17_ABLATION_SUMMARY_FILE),
+        "stage17_ablation_by_device": read_csv_optional(STAGE17_ABLATION_BY_DEVICE_FILE),
+        "stage18_pareto_transfer_summary": read_csv_optional(STAGE18_PARETO_TRANSFER_SUMMARY_FILE),
+        "stage18_pareto_transfer_by_device": read_csv_optional(STAGE18_PARETO_TRANSFER_BY_DEVICE_FILE),
+        "stage18_pareto_transfer_points": read_csv_optional(STAGE18_PARETO_TRANSFER_POINTS_FILE),
     }
 
 
@@ -4019,6 +4032,672 @@ elif page == "Research Evidence":
 
         for feature in MODEL_FEATURE_LABELS:
             st.write(f"• {feature}")
+
+
+
+    st.divider()
+
+    # ============================================================
+    # STAGES 17–18 — ADDITIONAL RESEARCH EVIDENCE
+    # These sections do NOT replace the deployed recommendation logic.
+    # ============================================================
+
+    section_header(
+        "Nanodevice Descriptor Ablation",
+        (
+            "How much does explicit memristor information improve cross-device "
+            "accelerator prediction?"
+        ),
+        (
+            "The same study-blocked holdout logic is used: when a device is held "
+            "out, every profile from its source study is excluded from training. "
+            "This isolates the information value of device descriptors."
+        ),
+    )
+
+    stage17_summary = DATA["stage17_ablation_summary"].copy()
+
+    if stage17_summary.empty:
+        st.info("Descriptor-ablation results are not available in this deployment.")
+    else:
+        s17 = stage17_summary.set_index("method")
+
+        if (
+            "HARDWARE_ONLY" in s17.index
+            and "FULL_DEVICE_AWARE" in s17.index
+        ):
+            hardware_only = s17.loc["HARDWARE_ONLY"]
+            full_device = s17.loc["FULL_DEVICE_AWARE"]
+
+            ho_mae = float(hardware_only["mean_candidate_mae_pp"])
+            da_mae = float(full_device["mean_candidate_mae_pp"])
+            ho_rmse = float(hardware_only["mean_candidate_rmse_pp"])
+            da_rmse = float(full_device["mean_candidate_rmse_pp"])
+
+            mae_reduction = (
+                100.0 * (ho_mae - da_mae) / ho_mae
+                if ho_mae > 0 else np.nan
+            )
+            rmse_reduction = (
+                100.0 * (ho_rmse - da_rmse) / ho_rmse
+                if ho_rmse > 0 else np.nan
+            )
+
+            a1, a2, a3, a4 = st.columns(4)
+            a1.metric("Hardware-only MAE", f"{ho_mae:.3f} pp")
+            a2.metric("Device-aware MAE", f"{da_mae:.3f} pp")
+            a3.metric(
+                "MAE reduction",
+                f"{mae_reduction:.1f}%"
+                if np.isfinite(mae_reduction)
+                else "N/A",
+            )
+            a4.metric(
+                "RMSE reduction",
+                f"{rmse_reduction:.1f}%"
+                if np.isfinite(rmse_reduction)
+                else "N/A",
+            )
+
+            stage17_chart = stage17_summary[
+                stage17_summary["method"].isin(
+                    [
+                        "HARDWARE_ONLY",
+                        "HARDWARE_PLUS_ON_OFF",
+                        "HARDWARE_PLUS_ON_OFF_MODE",
+                        "FULL_DEVICE_AWARE",
+                    ]
+                )
+            ][
+                [
+                    "method",
+                    "mean_candidate_mae_pp",
+                    "mean_candidate_rmse_pp",
+                ]
+            ].copy()
+
+            stage17_chart["Model"] = stage17_chart["method"].map(
+                {
+                    "HARDWARE_ONLY": "Hardware only",
+                    "HARDWARE_PLUS_ON_OFF": "Hardware + ON/OFF",
+                    "HARDWARE_PLUS_ON_OFF_MODE": "Hardware + ON/OFF + mode",
+                    "FULL_DEVICE_AWARE": "Full device-aware",
+                }
+            )
+
+            stage17_long = stage17_chart.melt(
+                id_vars="Model",
+                value_vars=[
+                    "mean_candidate_mae_pp",
+                    "mean_candidate_rmse_pp",
+                ],
+                var_name="Metric",
+                value_name="Error",
+            )
+
+            stage17_long["Metric"] = stage17_long["Metric"].map(
+                {
+                    "mean_candidate_mae_pp": "MAE",
+                    "mean_candidate_rmse_pp": "RMSE",
+                }
+            )
+
+            stage17_spec = {
+                "height": 320,
+                "title": "Study-blocked prediction error by feature set",
+                "mark": {"type": "bar"},
+                "encoding": {
+                    "x": {
+                        "field": "Model",
+                        "type": "nominal",
+                        "sort": [
+                            "Hardware only",
+                            "Hardware + ON/OFF",
+                            "Hardware + ON/OFF + mode",
+                            "Full device-aware",
+                        ],
+                        "axis": {
+                            "title": None,
+                            "labelAngle": -15,
+                            "labelLimit": 220,
+                        },
+                    },
+                    "y": {
+                        "field": "Error",
+                        "type": "quantitative",
+                        "axis": {
+                            "title": "Prediction error (percentage points)"
+                        },
+                    },
+                    "xOffset": {"field": "Metric"},
+                    "color": {
+                        "field": "Metric",
+                        "type": "nominal",
+                        "legend": {"title": "Metric"},
+                    },
+                    "tooltip": [
+                        {"field": "Model", "type": "nominal"},
+                        {"field": "Metric", "type": "nominal"},
+                        {
+                            "field": "Error",
+                            "type": "quantitative",
+                            "format": ".3f",
+                        },
+                    ],
+                },
+            }
+
+            st.vega_lite_chart(
+                stage17_long,
+                stage17_spec,
+                use_container_width=True,
+            )
+
+            render_html(
+                f"""
+                <div class="callout">
+                    <strong>Interpretation:</strong> adding the current memristor
+                    descriptors reduced mean prediction MAE from
+                    <strong>{ho_mae:.3f} pp</strong> to
+                    <strong>{da_mae:.3f} pp</strong> — about
+                    <strong>{mae_reduction:.1f}% lower</strong>. However, every
+                    baseline still passed the simple 0.5-pp near-optimal
+                    single-point test. Therefore this stage supports improved
+                    prediction of the broader response surface, not a claim that
+                    device descriptors are required to find every high-accuracy point.
+                </div>
+                """
+            )
+
+        if st.session_state.app_mode == "Researcher":
+            with st.expander("View ablation summary"):
+                st.dataframe(
+                    stage17_summary.round(4),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+            if not DATA["stage17_ablation_by_device"].empty:
+                with st.expander("View per-device ablation results"):
+                    st.dataframe(
+                        DATA["stage17_ablation_by_device"].round(4),
+                        use_container_width=True,
+                        hide_index=True,
+                    )
+
+    st.divider()
+
+    section_header(
+        "Zero-Shot Pareto Frontier Transfer",
+        (
+            "Can a model trained on known memristors approximate the "
+            "accuracy-versus-cost trade-off of an unseen device?"
+        ),
+        (
+            "The model predicts all 245 held-out configurations first, builds a "
+            "predicted frontier, and only then compares it with the true simulated "
+            "frontier. The cost axis remains a relative hardware-cost proxy."
+        ),
+    )
+
+    stage18_summary = DATA["stage18_pareto_transfer_summary"].copy()
+
+    if stage18_summary.empty:
+        st.info("Pareto-transfer results are not available in this deployment.")
+    else:
+        s18 = stage18_summary.set_index("method")
+
+        if (
+            "HARDWARE_ONLY" in s18.index
+            and "FULL_DEVICE_AWARE" in s18.index
+        ):
+            hardware_front = s18.loc["HARDWARE_ONLY"]
+            device_front = s18.loc["FULL_DEVICE_AWARE"]
+
+            ho_f1 = float(hardware_front["mean_pareto_f1"])
+            da_f1 = float(device_front["mean_pareto_f1"])
+            ho_dist = float(
+                hardware_front["mean_normalized_front_distance"]
+            )
+            da_dist = float(
+                device_front["mean_normalized_front_distance"]
+            )
+            ho_budget = float(
+                hardware_front["mean_cost_budget_regret_pp"]
+            )
+            da_budget = float(
+                device_front["mean_cost_budget_regret_pp"]
+            )
+            ho_worst = float(
+                hardware_front["max_cost_budget_regret_pp"]
+            )
+            da_worst = float(
+                device_front["max_cost_budget_regret_pp"]
+            )
+
+            front_distance_reduction = (
+                100.0 * (ho_dist - da_dist) / ho_dist
+                if ho_dist > 0 else np.nan
+            )
+            budget_regret_reduction = (
+                100.0 * (ho_budget - da_budget) / ho_budget
+                if ho_budget > 0 else np.nan
+            )
+
+            p1, p2, p3, p4 = st.columns(4)
+            p1.metric(
+                "Exact-frontier F1",
+                f"{da_f1:.3f}",
+                delta=f"{da_f1 - ho_f1:+.3f} vs hardware-only",
+            )
+            p2.metric(
+                "Frontier distance",
+                f"{da_dist:.4f}",
+                delta=f"{da_dist - ho_dist:+.4f}",
+                delta_color="inverse",
+            )
+            p3.metric(
+                "Mean budget regret",
+                f"{da_budget:.4f} pp",
+                delta=f"{da_budget - ho_budget:+.4f} pp",
+                delta_color="inverse",
+            )
+            p4.metric(
+                "Worst budget regret",
+                f"{da_worst:.2f} pp",
+                delta=f"{da_worst - ho_worst:+.2f} pp",
+                delta_color="inverse",
+            )
+
+            compare = stage18_summary[
+                [
+                    "method",
+                    "mean_normalized_front_distance",
+                    "mean_cost_budget_regret_pp",
+                ]
+            ].copy()
+
+            compare["Model"] = compare["method"].map(
+                {
+                    "HARDWARE_ONLY": "Hardware only",
+                    "FULL_DEVICE_AWARE": "Full device-aware",
+                }
+            )
+
+            left_chart, right_chart = st.columns(2)
+
+            with left_chart:
+                frontier_chart = compare[
+                    ["Model", "mean_normalized_front_distance"]
+                ].rename(
+                    columns={
+                        "mean_normalized_front_distance": "Value"
+                    }
+                )
+
+                st.vega_lite_chart(
+                    frontier_chart,
+                    {
+                        "height": 210,
+                        "title": "Frontier distance",
+                        "mark": {"type": "bar"},
+                        "encoding": {
+                            "y": {
+                                "field": "Model",
+                                "type": "nominal",
+                                "sort": [
+                                    "Full device-aware",
+                                    "Hardware only",
+                                ],
+                                "axis": {"title": None},
+                            },
+                            "x": {
+                                "field": "Value",
+                                "type": "quantitative",
+                                "axis": {
+                                    "title": "Normalized distance"
+                                },
+                            },
+                            "tooltip": [
+                                {"field": "Model", "type": "nominal"},
+                                {
+                                    "field": "Value",
+                                    "type": "quantitative",
+                                    "format": ".4f",
+                                },
+                            ],
+                        },
+                    },
+                    use_container_width=True,
+                )
+                st.caption("Lower is better.")
+
+            with right_chart:
+                regret_chart = compare[
+                    ["Model", "mean_cost_budget_regret_pp"]
+                ].rename(
+                    columns={
+                        "mean_cost_budget_regret_pp": "Value"
+                    }
+                )
+
+                st.vega_lite_chart(
+                    regret_chart,
+                    {
+                        "height": 210,
+                        "title": "Mean cost-budget regret",
+                        "mark": {"type": "bar"},
+                        "encoding": {
+                            "y": {
+                                "field": "Model",
+                                "type": "nominal",
+                                "sort": [
+                                    "Full device-aware",
+                                    "Hardware only",
+                                ],
+                                "axis": {"title": None},
+                            },
+                            "x": {
+                                "field": "Value",
+                                "type": "quantitative",
+                                "axis": {
+                                    "title": "Regret (percentage points)"
+                                },
+                            },
+                            "tooltip": [
+                                {"field": "Model", "type": "nominal"},
+                                {
+                                    "field": "Value",
+                                    "type": "quantitative",
+                                    "format": ".4f",
+                                },
+                            ],
+                        },
+                    },
+                    use_container_width=True,
+                )
+                st.caption("Lower is better.")
+
+            render_html(
+                f"""
+                <div class="success-card">
+                    <strong>Main result:</strong> compared with the
+                    hardware-only model, the full device-aware model reduced
+                    mean normalized frontier distance by about
+                    <strong>{front_distance_reduction:.1f}%</strong> and reduced
+                    mean cost-budget regret by about
+                    <strong>{budget_regret_reduction:.1f}%</strong>.
+                    This supports improved unseen-device trade-off approximation.
+                </div>
+                """
+            )
+
+        stage18_points = DATA["stage18_pareto_transfer_points"].copy()
+
+        if not stage18_points.empty:
+            available_stage18_devices = sorted(
+                stage18_points["held_out_device"].astype(str).unique()
+            )
+
+            example_device = (
+                "TiOx_02_Ni"
+                if "TiOx_02_Ni" in available_stage18_devices
+                else available_stage18_devices[0]
+            )
+
+            plot_device = st.selectbox(
+                "Example device",
+                available_stage18_devices,
+                index=available_stage18_devices.index(example_device),
+                key="stage18_plot_device",
+                help=(
+                    "The Ni profile is the default because it was the most "
+                    "difficult historical failure case."
+                ),
+            )
+
+            points = stage18_points[
+                (stage18_points["held_out_device"].astype(str) == plot_device)
+                & (stage18_points["method"] == "FULL_DEVICE_AWARE")
+            ].copy()
+
+            if not points.empty:
+                points["True Pareto"] = bool_series(points["is_true_pareto"])
+                points["Predicted Pareto"] = bool_series(
+                    points["is_predicted_pareto"]
+                )
+
+                all_points = points[
+                    [
+                        "cost_proxy",
+                        "actual_accuracy",
+                        "predicted_accuracy",
+                        "crossbar_size",
+                        "requested_weight_bits",
+                        "adc_bits",
+                    ]
+                ].copy()
+
+                true_front = points[points["True Pareto"]].sort_values(
+                    "cost_proxy"
+                ).copy()
+
+                predicted_front = points[
+                    points["Predicted Pareto"]
+                ].sort_values("cost_proxy").copy()
+
+                layers = [
+                    {
+                        "mark": {
+                            "type": "point",
+                            "filled": True,
+                            "size": 36,
+                            "opacity": 0.24,
+                        },
+                        "encoding": {
+                            "x": {
+                                "field": "cost_proxy",
+                                "type": "quantitative",
+                                "scale": {"type": "log"},
+                                "axis": {
+                                    "title": "Relative hardware-cost proxy"
+                                },
+                            },
+                            "y": {
+                                "field": "actual_accuracy",
+                                "type": "quantitative",
+                                "axis": {
+                                    "title": "Accuracy (%)"
+                                },
+                            },
+                            "tooltip": [
+                                {
+                                    "field": "actual_accuracy",
+                                    "type": "quantitative",
+                                    "format": ".3f",
+                                },
+                                {
+                                    "field": "predicted_accuracy",
+                                    "type": "quantitative",
+                                    "format": ".3f",
+                                },
+                                {
+                                    "field": "crossbar_size",
+                                    "type": "quantitative",
+                                },
+                                {
+                                    "field": "requested_weight_bits",
+                                    "type": "quantitative",
+                                },
+                                {
+                                    "field": "adc_bits",
+                                    "type": "quantitative",
+                                },
+                            ],
+                        },
+                    }
+                ]
+
+                if not true_front.empty:
+                    layers.append(
+                        {
+                            "data": {
+                                "values": true_front.to_dict("records")
+                            },
+                            "mark": {
+                                "type": "line",
+                                "point": True,
+                                "strokeWidth": 3,
+                            },
+                            "encoding": {
+                                "x": {
+                                    "field": "cost_proxy",
+                                    "type": "quantitative",
+                                    "scale": {"type": "log"},
+                                },
+                                "y": {
+                                    "field": "actual_accuracy",
+                                    "type": "quantitative",
+                                },
+                                "color": {
+                                    "datum": "True",
+                                    "type": "nominal",
+                                    "legend": {
+                                        "title": None,
+                                        "orient": "bottom",
+                                        "direction": "horizontal",
+                                    },
+                                },
+                            },
+                        }
+                    )
+
+                if not predicted_front.empty:
+                    layers.append(
+                        {
+                            "data": {
+                                "values": predicted_front.to_dict("records")
+                            },
+                            "mark": {
+                                "type": "line",
+                                "point": True,
+                                "strokeDash": [7, 5],
+                                "strokeWidth": 3,
+                            },
+                            "encoding": {
+                                "x": {
+                                    "field": "cost_proxy",
+                                    "type": "quantitative",
+                                    "scale": {"type": "log"},
+                                },
+                                "y": {
+                                    "field": "predicted_accuracy",
+                                    "type": "quantitative",
+                                },
+                                "color": {
+                                    "datum": "Predicted",
+                                    "type": "nominal",
+                                    "legend": {
+                                        "title": None,
+                                        "orient": "bottom",
+                                        "direction": "horizontal",
+                                    },
+                                },
+                            },
+                        }
+                    )
+
+                st.vega_lite_chart(
+                    all_points,
+                    {
+                        "height": 390,
+                        "title": (
+                            f"{plot_device}: predicted vs true accuracy–cost frontier"
+                        ),
+                        "layer": layers,
+                    },
+                    use_container_width=True,
+                )
+
+                per_device = DATA[
+                    "stage18_pareto_transfer_by_device"
+                ]
+
+                if not per_device.empty:
+                    selected_rows = per_device[
+                        per_device["held_out_device"].astype(str)
+                        == plot_device
+                    ].copy()
+
+                    if (
+                        not selected_rows.empty
+                        and st.session_state.app_mode == "Researcher"
+                    ):
+                        display_rows = selected_rows[
+                            [
+                                "method",
+                                "true_pareto_points",
+                                "predicted_pareto_points",
+                                "pareto_recall",
+                                "pareto_precision",
+                                "pareto_f1",
+                                "normalized_front_distance",
+                                "mean_cost_budget_regret_pp",
+                                "max_cost_budget_regret_pp",
+                            ]
+                        ].copy()
+
+                        display_rows["method"] = display_rows["method"].map(
+                            {
+                                "HARDWARE_ONLY": "Hardware only",
+                                "FULL_DEVICE_AWARE": "Full device-aware",
+                            }
+                        ).fillna(display_rows["method"])
+
+                        display_rows = display_rows.rename(
+                            columns={
+                                "method": "Model",
+                                "true_pareto_points": "True frontier points",
+                                "predicted_pareto_points": "Predicted frontier points",
+                                "pareto_recall": "Frontier recall",
+                                "pareto_precision": "Frontier precision",
+                                "pareto_f1": "Frontier F1",
+                                "normalized_front_distance": "Frontier distance",
+                                "mean_cost_budget_regret_pp": "Mean budget regret (pp)",
+                                "max_cost_budget_regret_pp": "Worst budget regret (pp)",
+                            }
+                        )
+
+                        with st.expander(
+                            "Detailed metrics for the selected device"
+                        ):
+                            st.dataframe(
+                                display_rows.round(4),
+                                use_container_width=True,
+                                hide_index=True,
+                            )
+
+        render_html(
+            """
+            <div class="warning-card">
+                <strong>Scientific scope:</strong> exact Pareto-front recovery
+                remains imperfect, so describe this as
+                <strong>improved frontier approximation</strong>, not complete
+                reconstruction. The cost axis is a relative hardware-cost proxy,
+                not measured energy, area, latency, power or monetary cost.
+                This remains a pilot over 10 device profiles from 8 independent
+                studies and 5 technology families.
+            </div>
+            """
+        )
+
+        if st.session_state.app_mode == "Researcher":
+            with st.expander("View Pareto-transfer summary"):
+                st.dataframe(
+                    stage18_summary.round(4),
+                    use_container_width=True,
+                    hide_index=True,
+                )
 
 
 # ============================================================
