@@ -753,10 +753,753 @@ def format_policy(policy: str):
     return clean_text(policy)
 
 
+def human_mode(mode):
+    return public_mode_name(mode)
+
+
+def human_research_tier(value):
+    names = {
+        "TIER_A_INTERPOLATIVE_GAP": "Tier A — Interpolative gap",
+        "TIER_B_MODERATE_GAP": "Tier B — Moderate gap",
+        "TIER_C_HIGH_EXTRAPOLATION": "Tier C — High extrapolation",
+        "EXISTING_OR_NEAR_DUPLICATE": "Existing / near duplicate",
+    }
+    return names.get(clean_text(value, ""), clean_text(value))
+
+
+def human_match_class(value):
+    names = {
+        "EXACT_DESCRIPTOR_MATCH": "Exact descriptor match",
+        "VERY_CLOSE_EXISTING_PROFILE": "Very-close existing profile",
+        "CLOSE_EXISTING_PROFILE": "Close existing profile",
+        "MODERATE_GAP": "Moderate gap",
+        "LARGE_GAP": "Large gap",
+    }
+    return names.get(
+        clean_text(value, ""),
+        clean_text(value).replace("_", " ").title(),
+    )
+
+
+def display_target_states(mode, state_count):
+    mode = clean_text(mode, "").upper()
+
+    if mode in {"ANALOG", "GRADUAL", "GRADUAL_MULTILEVEL"}:
+        try:
+            numeric = int(float(state_count))
+        except Exception:
+            numeric = 0
+
+        if numeric <= 0:
+            return "Not fixed"
+
+    try:
+        numeric = int(float(state_count))
+        return str(numeric) if numeric > 0 else "Not reported"
+    except Exception:
+        return clean_text(state_count, "Not reported")
+
+
 def safe_numeric(df, column):
     if column not in df.columns:
         return pd.Series(dtype=float)
     return pd.to_numeric(df[column], errors="coerce")
+
+
+def evidence_bucket(value):
+    raw = clean_text(value, "").strip().upper().replace("-", "_").replace(" ", "_")
+    if raw in {"REPORTED", "MEASURED", "EXPERIMENTAL", "DIRECTLY_REPORTED"}:
+        return "Reported"
+    if raw in {"DERIVED", "CALCULATED", "COMPUTED", "INFERRED"}:
+        return "Derived"
+    if raw in {"ASSUMED", "MODEL_ASSUMPTION", "SIMULATOR_ASSUMPTION"}:
+        return "Assumed"
+    if raw in {"MISSING", "NOT_REPORTED", "UNREPORTED", "NOT_AVAILABLE"}:
+        return "Missing"
+    return "Other"
+
+
+def render_accuracy_validation_chart(
+    predicted_accuracy,
+    actual_accuracy,
+    exhaustive_best_accuracy,
+    baseline_accuracy,
+):
+    chart_df = pd.DataFrame(
+        {
+            "Result": [
+                "AI predicted",
+                "Recommended actual",
+                "Exhaustive best",
+                "Software baseline",
+            ],
+            "Accuracy": [
+                float(predicted_accuracy),
+                float(actual_accuracy),
+                float(exhaustive_best_accuracy),
+                float(baseline_accuracy),
+            ],
+        }
+    )
+
+    chart_df["Label"] = chart_df["Accuracy"].map(
+        lambda x: f"{x:.2f}%"
+    )
+
+    low = float(chart_df["Accuracy"].min())
+    high = float(chart_df["Accuracy"].max())
+    spread = max(high - low, 0.10)
+    padding = max(0.12, spread * 0.35)
+
+    spec = {
+        "height": 300,
+        "title": "Prediction → exhaustive validation",
+        "layer": [
+            {
+                "mark": {"type": "line", "opacity": 0.35},
+                "encoding": {
+                    "x": {
+                        "field": "Result",
+                        "type": "nominal",
+                        "sort": [
+                            "AI predicted",
+                            "Recommended actual",
+                            "Exhaustive best",
+                            "Software baseline",
+                        ],
+                        "axis": {"title": None, "labelAngle": 0},
+                    },
+                    "y": {
+                        "field": "Accuracy",
+                        "type": "quantitative",
+                        "scale": {
+                            "domain": [low - padding, high + padding],
+                            "zero": False,
+                        },
+                        "axis": {
+                            "title": "Accuracy (%)",
+                            "format": ".2f",
+                        },
+                    },
+                },
+            },
+            {
+                "mark": {
+                    "type": "point",
+                    "filled": True,
+                    "size": 120,
+                },
+                "encoding": {
+                    "x": {
+                        "field": "Result",
+                        "type": "nominal",
+                        "sort": [
+                            "AI predicted",
+                            "Recommended actual",
+                            "Exhaustive best",
+                            "Software baseline",
+                        ],
+                    },
+                    "y": {
+                        "field": "Accuracy",
+                        "type": "quantitative",
+                        "scale": {
+                            "domain": [low - padding, high + padding],
+                            "zero": False,
+                        },
+                    },
+                    "tooltip": [
+                        {"field": "Result", "type": "nominal"},
+                        {
+                            "field": "Accuracy",
+                            "type": "quantitative",
+                            "format": ".3f",
+                        },
+                    ],
+                },
+            },
+            {
+                "mark": {
+                    "type": "text",
+                    "dy": -16,
+                    "fontWeight": "bold",
+                },
+                "encoding": {
+                    "x": {
+                        "field": "Result",
+                        "type": "nominal",
+                        "sort": [
+                            "AI predicted",
+                            "Recommended actual",
+                            "Exhaustive best",
+                            "Software baseline",
+                        ],
+                    },
+                    "y": {
+                        "field": "Accuracy",
+                        "type": "quantitative",
+                        "scale": {
+                            "domain": [low - padding, high + padding],
+                            "zero": False,
+                        },
+                    },
+                    "text": {"field": "Label", "type": "nominal"},
+                },
+            },
+        ],
+    }
+
+    st.vega_lite_chart(
+        chart_df,
+        spec,
+        use_container_width=True,
+    )
+
+
+def render_regret_threshold_chart(regret_pp, threshold_pp):
+    regret_pp = float(regret_pp)
+    threshold_pp = float(threshold_pp)
+    passed = regret_pp <= threshold_pp
+
+    axis_max = max(
+        threshold_pp * 1.35,
+        regret_pp * 1.20,
+        threshold_pp + 0.10,
+    )
+
+    chart_df = pd.DataFrame(
+        {
+            "Metric": ["Regret"],
+            "Value": [regret_pp],
+            "Start": [0.0],
+            "Label": [
+                f"{regret_pp:.2f} pp — {'PASS' if passed else 'FAIL'}"
+            ],
+        }
+    )
+
+    spec = {
+        "height": 165,
+        "title": "Regret against near-optimal threshold",
+        "layer": [
+            {
+                "mark": {"type": "bar", "size": 30},
+                "encoding": {
+                    "x": {
+                        "field": "Value",
+                        "type": "quantitative",
+                        "scale": {"domain": [0, axis_max]},
+                        "axis": {
+                            "title": "Accuracy regret (percentage points)",
+                            "format": ".2f",
+                        },
+                    },
+                    "x2": {"field": "Start"},
+                    "y": {
+                        "field": "Metric",
+                        "type": "nominal",
+                        "axis": {"title": None},
+                    },
+                },
+            },
+            {
+                "data": {
+                    "values": [{"Threshold": threshold_pp}]
+                },
+                "mark": {
+                    "type": "rule",
+                    "strokeDash": [6, 5],
+                    "size": 2,
+                },
+                "encoding": {
+                    "x": {
+                        "field": "Threshold",
+                        "type": "quantitative",
+                        "scale": {"domain": [0, axis_max]},
+                    },
+                },
+            },
+            {
+                "mark": {
+                    "type": "text",
+                    "dx": 8,
+                    "dy": -24,
+                    "align": "left",
+                    "fontWeight": "bold",
+                },
+                "encoding": {
+                    "x": {
+                        "field": "Value",
+                        "type": "quantitative",
+                        "scale": {"domain": [0, axis_max]},
+                    },
+                    "y": {"field": "Metric", "type": "nominal"},
+                    "text": {"field": "Label", "type": "nominal"},
+                },
+            },
+        ],
+    }
+
+    st.vega_lite_chart(
+        chart_df,
+        spec,
+        use_container_width=True,
+    )
+
+
+def render_predicted_vs_actual_chart(
+    candidate_df,
+    recommended_row,
+    raw_best_row,
+):
+    chart_df = candidate_df[
+        [
+            "predicted_accuracy",
+            "accuracy",
+            "crossbar_size",
+            "requested_weight_bits",
+            "adc_bits",
+        ]
+    ].copy()
+
+    chart_df = chart_df.rename(
+        columns={
+            "predicted_accuracy": "Predicted Accuracy",
+            "accuracy": "Actual Accuracy",
+            "crossbar_size": "Crossbar",
+            "requested_weight_bits": "Weight Bits",
+            "adc_bits": "ADC Bits",
+        }
+    )
+
+    low = float(
+        min(
+            chart_df["Predicted Accuracy"].min(),
+            chart_df["Actual Accuracy"].min(),
+        )
+    )
+    high = float(
+        max(
+            chart_df["Predicted Accuracy"].max(),
+            chart_df["Actual Accuracy"].max(),
+        )
+    )
+    pad = max(0.05, (high - low) * 0.04)
+
+    rec_point = {
+        "Predicted Accuracy": float(
+            recommended_row["predicted_accuracy"]
+        ),
+        "Actual Accuracy": float(
+            recommended_row["accuracy"]
+        ),
+        "Label": "AI recommendation",
+    }
+
+    best_point = {
+        "Predicted Accuracy": float(
+            raw_best_row["predicted_accuracy"]
+        ),
+        "Actual Accuracy": float(
+            raw_best_row["accuracy"]
+        ),
+        "Label": "Exhaustive best",
+    }
+
+    ideal_line = [
+        {
+            "Predicted Accuracy": low - pad,
+            "Actual Accuracy": low - pad,
+        },
+        {
+            "Predicted Accuracy": high + pad,
+            "Actual Accuracy": high + pad,
+        },
+    ]
+
+    enc_x = {
+        "field": "Predicted Accuracy",
+        "type": "quantitative",
+        "scale": {"domain": [low - pad, high + pad], "zero": False},
+        "axis": {"title": "Predicted accuracy (%)", "format": ".2f"},
+    }
+
+    enc_y = {
+        "field": "Actual Accuracy",
+        "type": "quantitative",
+        "scale": {"domain": [low - pad, high + pad], "zero": False},
+        "axis": {"title": "Actual simulated accuracy (%)", "format": ".2f"},
+    }
+
+    spec = {
+        "height": 410,
+        "title": (
+            f"Predicted vs actual across {len(chart_df)} "
+            "held-out configurations"
+        ),
+        "layer": [
+            {
+                "mark": {
+                    "type": "point",
+                    "filled": True,
+                    "size": 48,
+                    "opacity": 0.45,
+                },
+                "encoding": {
+                    "x": enc_x,
+                    "y": enc_y,
+                    "tooltip": [
+                        {
+                            "field": "Predicted Accuracy",
+                            "type": "quantitative",
+                            "format": ".3f",
+                        },
+                        {
+                            "field": "Actual Accuracy",
+                            "type": "quantitative",
+                            "format": ".3f",
+                        },
+                        {"field": "Crossbar", "type": "quantitative"},
+                        {"field": "Weight Bits", "type": "quantitative"},
+                        {"field": "ADC Bits", "type": "quantitative"},
+                    ],
+                },
+            },
+            {
+                "data": {"values": ideal_line},
+                "mark": {
+                    "type": "line",
+                    "strokeDash": [7, 5],
+                    "opacity": 0.7,
+                },
+                "encoding": {"x": enc_x, "y": enc_y},
+            },
+            {
+                "data": {"values": [rec_point]},
+                "mark": {
+                    "type": "point",
+                    "filled": True,
+                    "shape": "diamond",
+                    "size": 230,
+                },
+                "encoding": {"x": enc_x, "y": enc_y},
+            },
+            {
+                "data": {"values": [rec_point]},
+                "mark": {
+                    "type": "text",
+                    "dx": 10,
+                    "dy": -12,
+                    "align": "left",
+                    "fontWeight": "bold",
+                },
+                "encoding": {
+                    "x": enc_x,
+                    "y": enc_y,
+                    "text": {"field": "Label"},
+                },
+            },
+            {
+                "data": {"values": [best_point]},
+                "mark": {
+                    "type": "point",
+                    "filled": True,
+                    "shape": "triangle-up",
+                    "size": 220,
+                },
+                "encoding": {"x": enc_x, "y": enc_y},
+            },
+        ],
+    }
+
+    st.vega_lite_chart(
+        chart_df,
+        spec,
+        use_container_width=True,
+    )
+
+
+def render_regret_comparison_chart(summary_df):
+    rows = []
+
+    for _, r in summary_df.iterrows():
+        device = str(r["held_out_device"])
+
+        if "baseline_regret_pp" in r.index:
+            rows.append(
+                {
+                    "Device": device,
+                    "Policy": "Original baseline",
+                    "Regret": float(r["baseline_regret_pp"]),
+                }
+            )
+
+        if "guarded_regret_pp" in r.index:
+            rows.append(
+                {
+                    "Device": device,
+                    "Policy": "Support-gated",
+                    "Regret": float(r["guarded_regret_pp"]),
+                }
+            )
+
+    df = pd.DataFrame(rows)
+
+    if df.empty:
+        return
+
+    spec = {
+        "height": 330,
+        "title": "Held-out-device regret: original vs support-gated policy",
+        "mark": {"type": "bar"},
+        "encoding": {
+            "x": {
+                "field": "Device",
+                "type": "nominal",
+                "axis": {"title": None, "labelAngle": -35},
+            },
+            "xOffset": {"field": "Policy"},
+            "color": {
+                "field": "Policy",
+                "type": "nominal",
+                "legend": {"title": None},
+            },
+            "y": {
+                "field": "Regret",
+                "type": "quantitative",
+                "axis": {
+                    "title": "Regret (percentage points)",
+                    "format": ".2f",
+                },
+            },
+            "tooltip": [
+                {"field": "Device", "type": "nominal"},
+                {"field": "Policy", "type": "nominal"},
+                {
+                    "field": "Regret",
+                    "type": "quantitative",
+                    "format": ".3f",
+                },
+            ],
+        },
+    }
+
+    st.vega_lite_chart(
+        df,
+        spec,
+        use_container_width=True,
+    )
+
+
+def render_sensitivity_chart(selected_sens):
+    if selected_sens.empty:
+        return
+
+    df = selected_sens[
+        ["factor", "accuracy_effect_range_pp"]
+    ].copy()
+
+    df["Factor"] = (
+        df["factor"]
+        .astype(str)
+        .str.replace("_", " ", regex=False)
+        .str.title()
+    )
+
+    spec = {
+        "height": 250,
+        "title": "Selected-device empirical sensitivity",
+        "mark": {"type": "bar"},
+        "encoding": {
+            "x": {
+                "field": "accuracy_effect_range_pp",
+                "type": "quantitative",
+                "axis": {
+                    "title": "Grouped mean accuracy range (pp)",
+                    "format": ".2f",
+                },
+            },
+            "y": {
+                "field": "Factor",
+                "type": "nominal",
+                "sort": "-x",
+                "axis": {"title": None},
+            },
+            "tooltip": [
+                {"field": "Factor", "type": "nominal"},
+                {
+                    "field": "accuracy_effect_range_pp",
+                    "type": "quantitative",
+                    "format": ".3f",
+                },
+            ],
+        },
+    }
+
+    st.vega_lite_chart(
+        df,
+        spec,
+        use_container_width=True,
+    )
+
+
+def render_pareto_chart(
+    candidate_df,
+    pareto_df,
+    recommended_row,
+):
+    if candidate_df.empty:
+        return
+
+    all_points = candidate_df[
+        [
+            "relative_hardware_cost_proxy",
+            "accuracy",
+        ]
+    ].copy()
+
+    all_points = all_points.rename(
+        columns={
+            "relative_hardware_cost_proxy": "Cost",
+            "accuracy": "Accuracy",
+        }
+    )
+
+    pareto_points = pd.DataFrame()
+
+    if not pareto_df.empty:
+        pareto_points = pareto_df[
+            [
+                "relative_hardware_cost_proxy",
+                "accuracy",
+            ]
+        ].copy()
+
+        pareto_points = pareto_points.rename(
+            columns={
+                "relative_hardware_cost_proxy": "Cost",
+                "accuracy": "Accuracy",
+            }
+        ).sort_values("Cost")
+
+    rec = {
+        "Cost": float(
+            recommended_row["relative_hardware_cost_proxy"]
+        ),
+        "Accuracy": float(
+            recommended_row["accuracy"]
+        ),
+        "Label": "AI recommendation",
+    }
+
+    layers = [
+        {
+            "data": {"values": all_points.to_dict("records")},
+            "mark": {
+                "type": "point",
+                "filled": True,
+                "size": 34,
+                "opacity": 0.22,
+            },
+            "encoding": {
+                "x": {
+                    "field": "Cost",
+                    "type": "quantitative",
+                    "scale": {"type": "log"},
+                    "axis": {
+                        "title": "Relative hardware-cost proxy (log scale)"
+                    },
+                },
+                "y": {
+                    "field": "Accuracy",
+                    "type": "quantitative",
+                    "axis": {"title": "Simulated accuracy (%)"},
+                },
+            },
+        }
+    ]
+
+    if not pareto_points.empty:
+        layers.append(
+            {
+                "data": {
+                    "values": pareto_points.to_dict("records")
+                },
+                "mark": {
+                    "type": "line",
+                    "point": True,
+                    "size": 2,
+                },
+                "encoding": {
+                    "x": {
+                        "field": "Cost",
+                        "type": "quantitative",
+                        "scale": {"type": "log"},
+                    },
+                    "y": {
+                        "field": "Accuracy",
+                        "type": "quantitative",
+                    },
+                },
+            }
+        )
+
+    layers += [
+        {
+            "data": {"values": [rec]},
+            "mark": {
+                "type": "point",
+                "filled": True,
+                "shape": "diamond",
+                "size": 230,
+            },
+            "encoding": {
+                "x": {
+                    "field": "Cost",
+                    "type": "quantitative",
+                    "scale": {"type": "log"},
+                },
+                "y": {
+                    "field": "Accuracy",
+                    "type": "quantitative",
+                },
+            },
+        },
+        {
+            "data": {"values": [rec]},
+            "mark": {
+                "type": "text",
+                "dx": 10,
+                "dy": -10,
+                "align": "left",
+                "fontWeight": "bold",
+            },
+            "encoding": {
+                "x": {
+                    "field": "Cost",
+                    "type": "quantitative",
+                    "scale": {"type": "log"},
+                },
+                "y": {
+                    "field": "Accuracy",
+                    "type": "quantitative",
+                },
+                "text": {"field": "Label"},
+            },
+        },
+    ]
+
+    spec = {
+        "height": 360,
+        "title": "Accuracy vs relative hardware-cost proxy",
+        "layer": layers,
+    }
+
+    st.vega_lite_chart(
+        all_points,
+        spec,
+        use_container_width=True,
+    )
 
 
 def provenance_complete_percentage(trace_df):
@@ -1491,6 +2234,60 @@ elif page == "Forward Design":
             )
             st.dataframe(detail_df, use_container_width=True, hide_index=True)
 
+        selected_audit_forward = audit[
+            audit["device_id"] == selected_device
+        ].copy()
+
+        if not selected_audit_forward.empty and "value_type" in selected_audit_forward.columns:
+            selected_audit_forward["Evidence"] = (
+                selected_audit_forward["value_type"].map(evidence_bucket)
+            )
+
+            section_header(
+                "Evidence status",
+                (
+                    "The simulator distinguishes reported, derived, assumed "
+                    "and missing information rather than presenting every value "
+                    "as equally experimental."
+                ),
+            )
+
+            ec1, ec2, ec3, ec4 = st.columns(4)
+
+            for col, label in zip(
+                [ec1, ec2, ec3, ec4],
+                ["Reported", "Derived", "Assumed", "Missing"],
+            ):
+                col.metric(
+                    label,
+                    int(
+                        (
+                            selected_audit_forward["Evidence"]
+                            == label
+                        ).sum()
+                    ),
+                )
+
+            with st.expander("View selected-device evidence audit"):
+                audit_cols = [
+                    c
+                    for c in [
+                        "property_name",
+                        "simulator_value",
+                        "trace_value",
+                        "value_type",
+                        "status",
+                        "message",
+                    ]
+                    if c in selected_audit_forward.columns
+                ]
+
+                st.dataframe(
+                    selected_audit_forward[audit_cols],
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
     st.divider()
 
     section_header(
@@ -1673,7 +2470,141 @@ elif page == "Forward Design":
     v3.metric("Exhaustive raw best", f"{raw_best_accuracy:.2f}%")
     v4.metric("Software baseline", f"{software_baseline_accuracy:.2f}%")
 
+    visual_left, visual_right = st.columns([1.15, 0.85])
+
+    with visual_left:
+        render_accuracy_validation_chart(
+            rec_predicted,
+            rec_actual,
+            raw_best_accuracy,
+            software_baseline_accuracy,
+        )
+
+        st.caption(
+            "The accuracy axis is zoomed so small differences are visible. "
+            "Use the numeric labels when judging the magnitude."
+        )
+
+    with visual_right:
+        render_regret_threshold_chart(
+            rec_regret,
+            NEAR_OPTIMAL_TOLERANCE_PP,
+        )
+
+        st.caption(
+            f"PASS means regret ≤ {NEAR_OPTIMAL_TOLERANCE_PP:.2f} pp."
+        )
+
+    section_header(
+        "Top predicted candidates",
+        (
+            "The model predicts all 245 held-out configurations before "
+            "the final policy chooses one of them."
+        ),
+    )
+
+    top_five = (
+        candidate_df
+        .sort_values(
+            [
+                "predicted_accuracy",
+                "relative_hardware_cost_proxy",
+            ],
+            ascending=[False, True],
+        )
+        .head(5)
+        .copy()
+    )
+
+    top_display_cols = [
+        "crossbar_size",
+        "requested_weight_bits",
+        "adc_bits",
+        "predicted_accuracy",
+        "accuracy",
+        "relative_hardware_cost_proxy",
+    ]
+
+    if "validation_adjusted_score" in top_five.columns:
+        top_display_cols.insert(4, "validation_adjusted_score")
+
+    st.dataframe(
+        top_five[top_display_cols].round(3),
+        use_container_width=True,
+        hide_index=True,
+    )
+
     if st.session_state.app_mode == "Researcher":
+        section_header(
+            "Predicted vs actual across the full held-out design space",
+            (
+                "Each point is one accelerator configuration. "
+                "The diagonal is perfect prediction."
+            ),
+        )
+
+        render_predicted_vs_actual_chart(
+            candidate_df,
+            recommended_row,
+            raw_best_row,
+        )
+
+        st.caption(
+            "The diamond is the final AI recommendation. "
+            "The triangle is the exhaustive raw-accuracy optimum."
+        )
+
+        true_cost_crossbar = int(selected_summary["true_cost_aware_crossbar"])
+        true_cost_weight = int(selected_summary["true_cost_aware_weight_bits"])
+        true_cost_adc = int(selected_summary["true_cost_aware_adc_bits"])
+        true_cost_accuracy = float(selected_summary["true_cost_aware_accuracy"])
+
+        comparison_df = pd.DataFrame(
+            [
+                {
+                    "Design": "Support-gated AI recommendation",
+                    "Configuration": config_label(
+                        rec_crossbar,
+                        rec_weight,
+                        rec_adc,
+                    ),
+                    "Actual Accuracy": f"{rec_actual:.2f}%",
+                    "Role": "Unseen-device recommendation",
+                },
+                {
+                    "Design": "Raw accuracy best",
+                    "Configuration": config_label(
+                        raw_best_row["crossbar_size"],
+                        raw_best_row["requested_weight_bits"],
+                        raw_best_row["adc_bits"],
+                    ),
+                    "Actual Accuracy": f"{raw_best_accuracy:.2f}%",
+                    "Role": "Exhaustive reference",
+                },
+                {
+                    "Design": "Oracle cost-aware optimum",
+                    "Configuration": config_label(
+                        true_cost_crossbar,
+                        true_cost_weight,
+                        true_cost_adc,
+                    ),
+                    "Actual Accuracy": f"{true_cost_accuracy:.2f}%",
+                    "Role": "Uses true held-out accuracy",
+                },
+            ]
+        )
+
+        st.dataframe(
+            comparison_df,
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        st.caption(
+            "The oracle cost-aware optimum is a reference benchmark because "
+            "it uses true held-out simulated accuracy. It is not available to "
+            "the unseen-device recommender."
+        )
         top_cols = [
             "crossbar_size",
             "requested_weight_bits",
@@ -1943,8 +2874,34 @@ elif page == "Custom Device":
                         "support_reason": support_reason,
                     }
 
+                except ModuleNotFoundError as exc:
+                    if getattr(exc, "name", "") == "sklearn":
+                        st.warning(
+                            "Custom prediction is temporarily unavailable because "
+                            "the deployed environment is missing scikit-learn. "
+                            "Add scikit-learn to requirements.txt and redeploy."
+                        )
+                    else:
+                        st.warning(
+                            "Custom prediction could not start because a required "
+                            "Python package is unavailable."
+                        )
+
+                    if st.session_state.app_mode == "Researcher":
+                        with st.expander("Technical detail"):
+                            st.code(str(exc))
+
                 except Exception as exc:
-                    st.exception(exc)
+                    st.warning(
+                        "Custom prediction could not complete. "
+                        "The rest of the website is still available."
+                    )
+
+                    if st.session_state.app_mode == "Researcher":
+                        with st.expander("Technical detail"):
+                            st.code(
+                                f"{type(exc).__name__}: {exc}"
+                            )
 
         result = st.session_state.get("custom_result")
 
@@ -2185,6 +3142,23 @@ elif page == "Reverse Design":
             )
 
             display = req.head(15).copy()
+
+            display["candidate_mode"] = display[
+                "candidate_mode"
+            ].map(human_mode)
+
+            display["candidate_state_count"] = [
+                display_target_states(mode, states)
+                for mode, states in zip(
+                    req.head(15)["candidate_mode"],
+                    req.head(15)["candidate_state_count"],
+                )
+            ]
+
+            display["Match"] = display["Match"].map(
+                human_match_class
+            )
+
             display = display.rename(
                 columns={
                     "candidate_on_off_ratio": "Target ON/OFF",
@@ -2220,13 +3194,199 @@ elif page == "Reverse Design":
                 hide_index=True,
             )
 
+            section_header(
+                "Experimental literature match",
+                (
+                    "For each reverse-designed device-property target, "
+                    "the tool checks which experimental profile in the current "
+                    "literature dataset is closest."
+                ),
+                (
+                    "This is Stage 15 descriptor matching. "
+                    "A close descriptor match supports plausibility of the "
+                    "modeled device properties only; it does not mean the paper "
+                    "demonstrated the proposed accelerator configuration."
+                ),
+            )
+
+            try:
+                from stage15_match_to_experiments import (
+                    device_profiles as stage15_device_profiles,
+                    profile_distance as stage15_profile_distance,
+                    classify_match as stage15_classify_match,
+                )
+
+                experimental_profiles = stage15_device_profiles(
+                    ml_df
+                )
+
+                match_rows = []
+
+                for _, requirement_row in req.head(15).iterrows():
+                    best_profile = None
+                    best_distance = None
+                    best_terms = None
+
+                    for _, literature_profile in experimental_profiles.iterrows():
+                        terms = stage15_profile_distance(
+                            requirement_row,
+                            literature_profile,
+                        )
+
+                        if (
+                            best_distance is None
+                            or terms["match_distance"] < best_distance
+                        ):
+                            best_profile = literature_profile
+                            best_distance = float(
+                                terms["match_distance"]
+                            )
+                            best_terms = terms
+
+                    if best_profile is None:
+                        continue
+
+                    match_label = stage15_classify_match(
+                        best_terms["match_distance"],
+                        best_terms["ratio_log10_distance"],
+                        best_terms["mode_mismatch"],
+                        best_terms["state_count_distance"],
+                    )
+
+                    source_title = "Not available"
+
+                    source_match = devices[
+                        devices["device_id"]
+                        == str(best_profile["device_id"])
+                    ]
+
+                    if (
+                        not source_match.empty
+                        and "source_title" in source_match.columns
+                    ):
+                        source_title = clean_text(
+                            source_match.iloc[0]["source_title"]
+                        )
+
+                    coverage_text = "N/A"
+
+                    if not DATA["evidence_coverage"].empty:
+                        ev_match = DATA["evidence_coverage"][
+                            DATA["evidence_coverage"]["device_id"]
+                            == str(best_profile["device_id"])
+                        ]
+
+                        if (
+                            not ev_match.empty
+                            and "evidence_coverage_fraction"
+                            in ev_match.columns
+                        ):
+                            coverage_text = (
+                                f"{100 * float(ev_match.iloc[0]['evidence_coverage_fraction']):.0f}%"
+                            )
+
+                    match_rows.append(
+                        {
+                            "Target ON/OFF": float(
+                                requirement_row["candidate_on_off_ratio"]
+                            ),
+                            "Target Mode": str(
+                                requirement_row["candidate_mode"]
+                            ),
+                            "Target States": int(
+                                requirement_row["candidate_state_count"]
+                            ),
+                            "Matched Device": str(
+                                best_profile["device_id"]
+                            ),
+                            "Family": str(
+                                best_profile["technology_family"]
+                            ),
+                            "Study / DOI": str(
+                                best_profile["study_id"]
+                            ),
+                            "Match Class": match_label,
+                            "Distance": best_distance,
+                            "Evidence Coverage": coverage_text,
+                            "Source": source_title,
+                        }
+                    )
+
+                match_df = pd.DataFrame(match_rows)
+
+                if not match_df.empty:
+                    match_df["Target Mode"] = match_df[
+                        "Target Mode"
+                    ].map(human_mode)
+
+                    match_df["Target States"] = [
+                        display_target_states(mode, states)
+                        for mode, states in zip(
+                            [row["candidate_mode"] for _, row in req.head(15).iterrows()],
+                            match_df["Target States"],
+                        )
+                    ]
+
+                    match_df["Match Class"] = match_df[
+                        "Match Class"
+                    ].map(human_match_class)
+
+                    match_df = match_df.rename(
+                        columns={
+                            "Evidence Coverage": "Core Evidence Coverage"
+                        }
+                    )
+
+                    st.dataframe(
+                        match_df.round(3),
+                        use_container_width=True,
+                        hide_index=True,
+                    )
+
+                    exact_or_very_close = int(
+                        match_df["Match Class"].isin(
+                            [
+                                "EXACT_DESCRIPTOR_MATCH",
+                                "VERY_CLOSE_EXISTING_PROFILE",
+                            ]
+                        ).sum()
+                    )
+
+                    st.caption(
+                        f"{exact_or_very_close} of the displayed targets have "
+                        "an exact or very-close descriptor match in the current "
+                        "experimental literature dataset."
+                    )
+
+            except Exception as exc:
+                st.info(
+                    "Experimental matching data are available in the saved "
+                    "Stage-15 results, but the live matching helper could not "
+                    "be loaded in this session."
+                )
+
+                if (
+                    st.session_state.app_mode == "Researcher"
+                    and not DATA["reverse_matches"].empty
+                ):
+                    with st.expander(
+                        "View saved Stage-15 experimental matches"
+                    ):
+                        st.dataframe(
+                            DATA["reverse_matches"],
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+
             render_html(
                 """
                 <div class="warning-card">
                     <strong>Do not read this as material discovery.</strong>
                     A reverse-design target is a device-property specification.
-                    It does not prove that a chemical composition or fabrication
-                    process exists that will realize those properties.
+                    Experimental matching checks whether similar descriptors have
+                    appeared in the literature; it does not prove that a chemical
+                    composition or fabrication process will realize the target or
+                    that the paper demonstrated the proposed accelerator.
                 </div>
                 """
             )
@@ -2256,112 +3416,104 @@ elif page == "Research Targets":
     section_header(
         "Future Experimental Research Targets",
         (
-            "Find useful device-property regions that satisfy an accelerator target "
-            "but are not already closely represented by the current literature dataset."
+            "Explore device-property regions identified by the completed "
+            "Stage-16 pipeline as useful accelerator-oriented research gaps."
         ),
         (
-            "This is hypothesis generation at the descriptor level. "
-            "It deliberately avoids claiming a new material identity, stack or process."
+            "These targets are generated from Stage-14 reverse-design "
+            "requirements matched against Stage-15 experimental profiles. "
+            "The saved Stage-16 table is the authoritative source shown here."
         ),
         level=2,
     )
 
-    reverse_df = DATA["reverse_candidates"]
+    future_targets = DATA["future_targets"].copy()
 
-    if reverse_df.empty:
+    if future_targets.empty:
         st.error(
-            "Reverse-design results are missing. Run Stage 14 before using this page."
+            "future_research_targets.csv is missing. Run Stage 16 before "
+            "using this page."
         )
     else:
+        default_min_score = 95.5
+        default_max_cost = 5000.0
+
         c1, c2 = st.columns(2)
 
         with c1:
             future_accuracy = st.number_input(
                 "Minimum validation-adjusted accuracy",
-                value=95.5,
+                value=default_min_score,
                 step=0.1,
                 min_value=0.0,
                 max_value=100.0,
                 key="future_accuracy",
+                help=(
+                    "This filter narrows the saved Stage-16 research-target set. "
+                    "It does not regenerate new targets."
+                ),
             )
 
         with c2:
             future_cost = st.number_input(
                 "Maximum relative hardware-cost proxy",
-                value=5000.0,
+                value=default_max_cost,
                 step=100.0,
                 min_value=1.0,
                 key="future_cost",
+                help=(
+                    "Relative comparison proxy only; not measured energy, area, "
+                    "latency, power or monetary cost."
+                ),
             )
 
-        feasible = reverse_df[
-            (reverse_df["validation_adjusted_score"] >= future_accuracy)
+        future = future_targets[
+            (
+                future_targets["validation_adjusted_score"]
+                >= float(future_accuracy)
+            )
             & (
-                reverse_df["relative_hardware_cost_proxy"]
-                <= future_cost
+                future_targets["relative_hardware_cost_proxy"]
+                <= float(future_cost)
             )
         ].copy()
-
-        descriptor_key = [
-            "candidate_on_off_ratio",
-            "candidate_mode",
-            "candidate_state_count",
-        ]
-
-        req = (
-            feasible.sort_values(
-                descriptor_key
-                + [
-                    "relative_hardware_cost_proxy",
-                    "validation_adjusted_score",
-                ],
-                ascending=[True, True, True, True, False],
-            )
-            .drop_duplicates(descriptor_key, keep="first")
-            .copy()
-        )
-
-        req["research_tier"] = req[
-            "descriptor_distance_to_nearest_known"
-        ].map(research_tier)
-
-        future = req[
-            req["descriptor_distance_to_nearest_known"] >= 0.15
-        ].copy()
-
-        tier_order = {
-            "TIER_A_INTERPOLATIVE_GAP": 1,
-            "TIER_B_MODERATE_GAP": 2,
-            "TIER_C_HIGH_EXTRAPOLATION": 3,
-        }
 
         if future.empty:
             st.warning(
-                "No descriptor-gap targets remain under the current constraints."
+                "No saved Stage-16 research target satisfies the current filters."
             )
         else:
-            future["_tier_order"] = (
-                future["research_tier"].map(tier_order).fillna(9)
-            )
-
-            future = future.sort_values(
-                [
-                    "_tier_order",
-                    "descriptor_distance_to_nearest_known",
-                    "validation_adjusted_score",
-                    "relative_hardware_cost_proxy",
-                ],
-                ascending=[True, True, False, True],
-            ).reset_index(drop=True)
+            if "future_research_rank" in future.columns:
+                future = future.sort_values(
+                    "future_research_rank"
+                ).reset_index(drop=True)
+            else:
+                future = future.sort_values(
+                    [
+                        "match_distance",
+                        "validation_adjusted_score",
+                        "relative_hardware_cost_proxy",
+                    ],
+                    ascending=[True, False, True],
+                ).reset_index(drop=True)
 
             a = int(
-                (future["research_tier"] == "TIER_A_INTERPOLATIVE_GAP").sum()
+                (
+                    future["research_tier"]
+                    == "TIER_A_INTERPOLATIVE_GAP"
+                ).sum()
             )
             b = int(
-                (future["research_tier"] == "TIER_B_MODERATE_GAP").sum()
+                (
+                    future["research_tier"]
+                    == "TIER_B_MODERATE_GAP"
+                ).sum()
             )
             c = int(
-                (future["research_tier"] == "TIER_C_HIGH_EXTRAPOLATION").sum()
+                (
+                    future["research_tier"]
+                    == "TIER_C_HIGH_EXTRAPOLATION"
+                ).sum()
             )
 
             x1, x2, x3, x4 = st.columns(4)
@@ -2378,9 +3530,49 @@ elif page == "Research Targets":
                 """
             )
 
+            if (
+                abs(float(future_accuracy) - default_min_score) < 1e-9
+                and abs(float(future_cost) - default_max_cost) < 1e-9
+            ):
+                st.caption(
+                    "Default view = the saved Stage-16 result set. "
+                    "This should reproduce the official Stage-16 counts."
+                )
+            else:
+                st.caption(
+                    "You are viewing a filtered subset of the saved Stage-16 "
+                    "research targets."
+                )
+
             display = future.head(15).copy()
+
+            display["research_tier"] = display[
+                "research_tier"
+            ].map(human_research_tier)
+
+            raw_modes = display["candidate_mode"].copy()
+
+            display["candidate_mode"] = raw_modes.map(
+                human_mode
+            )
+
+            display["candidate_state_count"] = [
+                display_target_states(mode, states)
+                for mode, states in zip(
+                    raw_modes,
+                    display["candidate_state_count"],
+                )
+            ]
+
+            if "match_class" in display.columns:
+                display["match_class"] = display[
+                    "match_class"
+                ].map(human_match_class)
+
             display = display.rename(
                 columns={
+                    "future_research_rank": "Rank",
+                    "research_tier": "Research Tier",
                     "candidate_on_off_ratio": "Target ON/OFF",
                     "candidate_mode": "Conductance Mode",
                     "candidate_state_count": "Target States",
@@ -2389,24 +3581,32 @@ elif page == "Research Targets":
                     "adc_bits": "ADC Bits",
                     "validation_adjusted_score": "Adjusted Score",
                     "relative_hardware_cost_proxy": "Cost Proxy",
-                    "nearest_known_device": "Nearest Literature Device",
-                    "descriptor_distance_to_nearest_known": "Gap Distance",
-                    "research_tier": "Research Tier",
+                    "matched_device_id": "Nearest Literature Device",
+                    "matched_study_id": "Study / DOI",
+                    "matched_family": "Matched Family",
+                    "match_class": "Match Class",
+                    "match_distance": "Gap Distance",
                 }
             )
 
             cols = [
-                "Research Tier",
-                "Target ON/OFF",
-                "Conductance Mode",
-                "Target States",
-                "Crossbar",
-                "Weight Bits",
-                "ADC Bits",
-                "Adjusted Score",
-                "Cost Proxy",
-                "Nearest Literature Device",
-                "Gap Distance",
+                c
+                for c in [
+                    "Rank",
+                    "Research Tier",
+                    "Target ON/OFF",
+                    "Conductance Mode",
+                    "Target States",
+                    "Crossbar",
+                    "Weight Bits",
+                    "ADC Bits",
+                    "Adjusted Score",
+                    "Cost Proxy",
+                    "Nearest Literature Device",
+                    "Matched Family",
+                    "Gap Distance",
+                ]
+                if c in display.columns
             ]
 
             st.dataframe(
@@ -2420,8 +3620,9 @@ elif page == "Research Targets":
                 <div class="callout">
                     <strong>Nanotechnology meaning:</strong> use the target ON/OFF
                     ratio, conductance behavior and state-count requirement as
-                    experimentally testable specifications. Material/stack engineering
-                    can then try to realize those specifications.
+                    experimentally testable device specifications. Material/stack
+                    engineering can then investigate how to realize those
+                    specifications.
                 </div>
                 """
             )
@@ -2439,9 +3640,38 @@ elif page == "Research Targets":
             )
 
             if st.session_state.app_mode == "Researcher":
-                with st.expander("View all current research-gap targets"):
+                with st.expander(
+                    "View all filtered Stage-16 research targets"
+                ):
+                    full_display = future.copy()
+
+                    full_display["research_tier"] = full_display[
+                        "research_tier"
+                    ].map(human_research_tier)
+
+                    raw_full_modes = full_display[
+                        "candidate_mode"
+                    ].copy()
+
+                    full_display["candidate_mode"] = raw_full_modes.map(
+                        human_mode
+                    )
+
+                    full_display["candidate_state_count"] = [
+                        display_target_states(mode, states)
+                        for mode, states in zip(
+                            raw_full_modes,
+                            full_display["candidate_state_count"],
+                        )
+                    ]
+
+                    if "match_class" in full_display.columns:
+                        full_display["match_class"] = full_display[
+                            "match_class"
+                        ].map(human_match_class)
+
                     st.dataframe(
-                        future.drop(columns=["_tier_order"]),
+                        full_display,
                         use_container_width=True,
                         hide_index=True,
                     )
@@ -2641,6 +3871,14 @@ elif page == "Research Evidence":
         hide_index=True,
     )
 
+    render_regret_comparison_chart(summary)
+
+    st.caption(
+        "The support-gated policy fixed the large TiOx_02_Ni failure by "
+        "falling back to accuracy-first selection in an extrapolative region. "
+        "This does not make the low-ADC predictions themselves accurate."
+    )
+
     if st.session_state.app_mode == "Researcher":
         st.divider()
 
@@ -2699,6 +3937,11 @@ elif page == "Research Evidence":
                 st.caption(
                     f"Selected-device sensitivity: {selected_device}"
                 )
+
+                render_sensitivity_chart(
+                    selected_sens
+                )
+
                 st.dataframe(
                     selected_sens.round(3),
                     use_container_width=True,
@@ -2744,6 +3987,23 @@ elif page == "Research Evidence":
         )
 
         if not DATA["pareto_summary"].empty:
+            selected_pareto = DATA["pareto_front"][
+                DATA["pareto_front"]["device_id"]
+                == selected_device
+            ].copy()
+
+            render_pareto_chart(
+                candidate_df,
+                selected_pareto,
+                recommended_row,
+            )
+
+            st.caption(
+                "Dots are simulated configurations; the connected frontier "
+                "shows Pareto-efficient accuracy/cost trade-offs. "
+                "The cost axis is a relative hardware-cost proxy."
+            )
+
             st.dataframe(
                 DATA["pareto_summary"].round(3),
                 use_container_width=True,
