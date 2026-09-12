@@ -1,0 +1,5 @@
+scenario_id,proxy_for,devices,mean_accuracy_drop_pp,median_accuracy_drop_pp,max_accuracy_drop_pp,min_accuracy_drop_pp,exact_target_rate
+COMBINED_PRECISION_LOSS_2,stronger combined mapping/readout precision degradation,10,0.5409999999999968,0.43499999999999517,1.6799999999999926,0.21999999999999886,1.0
+COMBINED_PRECISION_LOSS_1,combined mapping/readout precision degradation,10,0.1879999999999981,0.1600000000000037,0.46999999999999886,0.09000000000000341,1.0
+WEIGHT_PRECISION_LOSS_1,reduced distinguishable conductance / effective weight precision,10,0.12499999999999574,0.1349999999999909,0.2600000000000051,0.0,1.0
+ADC_PRECISION_LOSS_1,reduced effective readout / ADC resolution,10,0.1530000000000001,0.12999999999999545,0.39000000000000057,0.04999999999999716,1.0

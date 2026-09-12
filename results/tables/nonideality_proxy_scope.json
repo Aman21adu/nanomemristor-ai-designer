@@ -1,0 +1,50 @@
+{
+  "stage": 10,
+  "name": "Nonideality robustness proxy",
+  "status": "UNCALIBRATED_PROXY",
+  "what_it_does": [
+    "Reuses the existing simulated configuration grid.",
+    "Represents nonideality stress as loss of effective weight precision and/or ADC precision.",
+    "Measures the resulting accuracy change relative to each device's best raw simulated configuration."
+  ],
+  "what_it_does_not_do": [
+    "It does not inject measured cycle-to-cycle variability.",
+    "It does not inject measured device-to-device variability.",
+    "It does not model retention drift, endurance degradation, temperature dependence, or stochastic read noise directly.",
+    "It is not calibrated to a probability distribution from experimental devices.",
+    "It must not be presented as measured physical robustness."
+  ],
+  "interpretation": "This is a transparent stress-test proxy for how accelerator performance responds when nonideal hardware effectively reduces usable mapping or readout precision. Direct device-physics nonideality models require experimentally supported distributions and are future refinement.",
+  "scenarios": [
+    {
+      "scenario_id": "BASELINE",
+      "weight_bit_loss": 0,
+      "adc_bit_loss": 0,
+      "proxy_for": "none"
+    },
+    {
+      "scenario_id": "WEIGHT_PRECISION_LOSS_1",
+      "weight_bit_loss": 1,
+      "adc_bit_loss": 0,
+      "proxy_for": "reduced distinguishable conductance / effective weight precision"
+    },
+    {
+      "scenario_id": "ADC_PRECISION_LOSS_1",
+      "weight_bit_loss": 0,
+      "adc_bit_loss": 1,
+      "proxy_for": "reduced effective readout / ADC resolution"
+    },
+    {
+      "scenario_id": "COMBINED_PRECISION_LOSS_1",
+      "weight_bit_loss": 1,
+      "adc_bit_loss": 1,
+      "proxy_for": "combined mapping/readout precision degradation"
+    },
+    {
+      "scenario_id": "COMBINED_PRECISION_LOSS_2",
+      "weight_bit_loss": 2,
+      "adc_bit_loss": 2,
+      "proxy_for": "stronger combined mapping/readout precision degradation"
+    }
+  ]
+}
