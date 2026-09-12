@@ -1,0 +1,22 @@
+{
+  "stage": 17,
+  "title": "Device-aware vs device-agnostic ablation",
+  "rows": 2450,
+  "devices": 10,
+  "studies": 8,
+  "families": 5,
+  "near_optimal_tolerance_pp": 0.5,
+  "split_policy": "For each held-out device, every row from its source study is excluded from training.",
+  "recommendation_policy": "Accuracy-first for every ML ablation so feature-set value is isolated from the deployed support gate.",
+  "models": {
+    "HARDWARE_ONLY": "Independent accelerator controls only.",
+    "HARDWARE_PLUS_ON_OFF": "Hardware controls plus log10 ON/OFF ratio.",
+    "HARDWARE_PLUS_ON_OFF_MODE": "Hardware controls plus ON/OFF ratio and conductance mode.",
+    "FULL_DEVICE_AWARE": "Current full device-aware feature set."
+  },
+  "interpretation": [
+    "Lower error/regret for device-aware variants supports useful transferable information from nanodevice descriptors.",
+    "Failure to improve is also scientifically informative.",
+    "This is a pilot study on a small literature-derived dataset."
+  ]
+}
