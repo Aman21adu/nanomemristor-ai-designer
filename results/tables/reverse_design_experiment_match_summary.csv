@@ -1,0 +1,9 @@
+metric,value
+reverse_design_requirements_matched,84.0
+exact_descriptor_matches,7.0
+very_close_or_exact_matches,20.0
+moderate_or_large_gap_matches,55.0
+unique_matched_source_studies,7.0
+unique_matched_device_profiles,8.0
+median_best_match_distance,1.0457254732523489
+max_best_match_distance,2.647427621219989
