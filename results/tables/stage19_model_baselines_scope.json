@@ -1,0 +1,18 @@
+{
+  "stage": 19,
+  "name": "Study-blocked ML model baseline comparison",
+  "rows": 2450,
+  "devices": 10,
+  "studies": 8,
+  "families": 5,
+  "split_rule": "Hold out one device and exclude every profile sharing the held-out study_id.",
+  "random_row_split_used": false,
+  "models": [
+    "RIDGE",
+    "RANDOM_FOREST",
+    "EXTRA_TREES",
+    "GRADIENT_BOOSTING",
+    "MLP"
+  ],
+  "important_note": "This is a baseline screening experiment with fixed reasonable hyperparameters, not exhaustive hyperparameter optimization."
+}
