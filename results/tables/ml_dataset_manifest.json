@@ -76,6 +76,6 @@
         "physical_state_count=0 means no fixed physical state count is available; consult state_count_available.",
         "effective_weight_levels describes accelerator mapping precision, not necessarily the physical state count of one memristor.",
         "relative_hardware_cost_proxy is heuristic and must not be reported as measured energy, power, latency, or silicon area.",
-        "Seven device profiles from five source studies remain a small research dataset. Results should be presented as pilot validation rather than proof of broad physical generalization."
+        "Ten device profiles from eight independent source studies remain a small research dataset. Results should be presented as pilot validation rather than proof of broad physical generalization."
     ]
 }
