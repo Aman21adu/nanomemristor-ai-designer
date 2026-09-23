@@ -1,0 +1,10 @@
+{
+  "stage": 22,
+  "name": "Independent-study bootstrap confidence intervals",
+  "sampling_unit": "independent held-out study",
+  "independent_studies": 8,
+  "bootstrap_resamples": 20000,
+  "random_seed": 42,
+  "ci_method": "percentile bootstrap",
+  "important_note": "Architecture configurations within a device are not treated as independent statistical samples. Bootstrap resampling is performed over the eight independent held-out study groups."
+}
