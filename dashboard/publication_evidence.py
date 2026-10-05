@@ -1833,7 +1833,9 @@ def render_publication_results_v2(mode="Beginner"):
                 expanded=False,
             ):
                 st.dataframe(
-                    model_summary.round(5),
+                    _clean_public_device_columns(
+                        model_summary
+                    ).round(5),
                     use_container_width=True,
                     hide_index=True,
                 )
@@ -1843,7 +1845,9 @@ def render_publication_results_v2(mode="Beginner"):
                 expanded=False,
             ):
                 st.dataframe(
-                    seed_summary.round(5),
+                    _clean_public_device_columns(
+                        seed_summary
+                    ).round(5),
                     use_container_width=True,
                     hide_index=True,
                 )
@@ -1853,7 +1857,9 @@ def render_publication_results_v2(mode="Beginner"):
                 expanded=False,
             ):
                 st.dataframe(
-                    pairwise.round(5),
+                    _clean_public_device_columns(
+                        pairwise
+                    ).round(5),
                     use_container_width=True,
                     hide_index=True,
                 )
@@ -1863,7 +1869,2816 @@ def render_publication_results_v2(mode="Beginner"):
                 expanded=False,
             ):
                 st.dataframe(
-                    pareto_front.round(5),
+                    _clean_public_device_columns(
+                        pareto_front
+                    ).round(5),
                     use_container_width=True,
                     hide_index=True,
                 )
+
+
+# ============================================================
+# SECTION 7 V3 — FINAL RESEARCH + HARDWARE EVIDENCE
+# ============================================================
+
+def render_publication_results_v3(mode="Beginner"):
+
+    inject_publication_style()
+
+    try:
+        data = load_publication_evidence()
+    except Exception as exc:
+        st.error(
+            "Final frozen research evidence could not be loaded."
+        )
+
+        if mode == "Researcher":
+            st.code(str(exc))
+
+        return
+
+
+    # --------------------------------------------------------
+    # DATA
+    # --------------------------------------------------------
+
+    model_summary = data["model_summary"]
+    device_results = data["device_results"]
+    pairwise = data["pairwise"]
+    seed_summary = data["seed_summary"]
+
+    hardware = data["hardware"]
+    candidates = data["pareto_candidates"]
+    pareto_front = data["pareto_front"]
+    hardware_summary = data["hardware_summary"]
+
+
+    def get_model(name):
+        rows = model_summary[
+            model_summary["model"] == name
+        ]
+
+        if rows.empty:
+            return None
+
+        return rows.iloc[0]
+
+
+    rf = get_model("RandomForest")
+    et = get_model("ExtraTrees")
+    gb = get_model("GradientBoosting")
+    hgb = get_model("HistGradientBoosting")
+
+
+    devices = int(
+        device_results["held_out_device"].nunique()
+    )
+
+    seeds = int(
+        seed_summary["seed"].nunique()
+    )
+
+    hardware_devices = int(
+        hardware["device_id"].nunique()
+    )
+
+
+    # ========================================================
+    # TOP SUMMARY
+    # ========================================================
+
+    st.markdown("### Final evidence snapshot")
+
+    s1, s2, s3, s4, s5 = st.columns(5)
+
+    s1.metric(
+        "Held-out devices",
+        devices,
+    )
+
+    s2.metric(
+        "ML models",
+        model_summary["model"].nunique(),
+    )
+
+    s3.metric(
+        "Random seeds",
+        seeds,
+    )
+
+    s4.metric(
+        "NeuroSim points",
+        len(hardware),
+    )
+
+    s5.metric(
+        "Pareto-front points",
+        len(pareto_front),
+    )
+
+    st.caption(
+        "The ML recommendation evidence and the NeuroSim hardware evidence "
+        "are complementary but separate validation layers."
+    )
+
+    st.divider()
+
+
+    # ========================================================
+    # BIG QUESTIONS
+    # ========================================================
+
+    st.markdown("### What does the final evidence answer?")
+
+    q1, q2, q3 = st.columns(3)
+
+    with q1:
+        with st.container(border=True):
+            st.markdown("#### ① Can the AI select a good design?")
+            st.caption(
+                "Compare the recommended configuration with the best "
+                "held-out configuration and calculate recommendation regret."
+            )
+
+    with q2:
+        with st.container(border=True):
+            st.markdown("#### ② Is the result robust?")
+            st.caption(
+                "Test multiple regressors, random seeds and independent "
+                "model agreement instead of relying on one convenient run."
+            )
+
+    with q3:
+        with st.container(border=True):
+            st.markdown("#### ③ What happens at hardware level?")
+            st.caption(
+                "Evaluate selected strategic configurations with NeuroSim "
+                "and inspect multi-objective hardware trade-offs."
+            )
+
+    st.divider()
+
+
+    # ========================================================
+    # TABS
+    # ========================================================
+
+    (
+        tab_summary,
+        tab_models,
+        tab_robustness,
+        tab_hardware,
+        tab_boundary,
+    ) = st.tabs(
+        [
+            "Summary",
+            "Model comparison",
+            "Robustness",
+            "Hardware evidence",
+            "Scientific boundary",
+        ]
+    )
+
+
+    # ========================================================
+    # TAB 1 — SUMMARY
+    # ========================================================
+
+    with tab_summary:
+
+        st.markdown("### Headline recommendation result")
+
+        r1, r2, r3, r4 = st.columns(4)
+
+        if rf is not None:
+            r1.metric(
+                "Random Forest",
+                f"{int(rf['guarded_success_devices'])}/10",
+                f"{float(rf['guarded_mean_regret_pp']):.3f} pp regret",
+            )
+
+        if et is not None:
+            r2.metric(
+                "Extra Trees",
+                f"{int(et['guarded_success_devices'])}/10",
+                f"{float(et['guarded_mean_regret_pp']):.3f} pp regret",
+            )
+
+        if gb is not None:
+            r3.metric(
+                "Gradient Boosting",
+                f"{int(gb['guarded_success_devices'])}/10",
+                f"{float(gb['guarded_mean_regret_pp']):.3f} pp regret",
+            )
+
+        if hgb is not None:
+            r4.metric(
+                "HistGradientBoosting",
+                f"{int(hgb['guarded_success_devices'])}/10",
+                f"{float(hgb['guarded_mean_regret_pp']):.3f} pp regret",
+            )
+
+        st.caption(
+            "Success means recommendation regret ≤ 0.5 percentage points "
+            "for the current held-out evaluation."
+        )
+
+        if rf is not None and et is not None:
+            st.success(
+                "Random Forest and Extra Trees each reached near-optimal "
+                "recommendations for all 10 held-out device profiles."
+            )
+
+
+        st.markdown("### Three evidence layers")
+
+        e1, e2, e3 = st.columns(3)
+
+        with e1:
+            with st.container(border=True):
+                st.markdown("#### ① Zero-shot ML recommendation")
+                st.caption(
+                    "Held-out-device recommendation, support handling, "
+                    "regret and near-optimal success."
+                )
+
+                st.markdown(
+                    "**Question:** Can knowledge transfer across devices "
+                    "to support a useful architecture decision?"
+                )
+
+        with e2:
+            with st.container(border=True):
+                st.markdown("#### ② Quantized software accuracy")
+                st.caption(
+                    "VGG8 / CIFAR-10 software-level inference accuracy "
+                    "for evaluated configurations."
+                )
+
+                st.markdown(
+                    "**Question:** What accuracy does the quantized "
+                    "software configuration achieve?"
+                )
+
+        with e3:
+            with st.container(border=True):
+                st.markdown("#### ③ NeuroSim hardware estimates")
+                st.caption(
+                    "Circuit/system estimates including latency, energy, "
+                    "area, throughput, FPS and energy efficiency."
+                )
+
+                st.markdown(
+                    "**Question:** What hardware trade-offs appear for "
+                    "the selected strategic configurations?"
+                )
+
+        st.warning(
+            "These are three distinct evidence layers. "
+            "Do not interpret them as one fabricated-chip measurement."
+        )
+
+
+    # ========================================================
+    # TAB 2 — MODEL COMPARISON
+    # ========================================================
+
+    with tab_models:
+
+        st.markdown(
+            "### Does the conclusion depend on one ML model?"
+        )
+
+        st.info(
+            "Read the graphs in this order: recommendation regret → "
+            "near-optimal success → prediction error versus decision quality."
+        )
+
+
+        # ----------------------------------------------------
+        # Graph 1
+        # ----------------------------------------------------
+
+        st.markdown("#### A. Baseline vs support-gated regret")
+
+        st.caption(
+            "Lower is better. Regret measures how much actual accuracy "
+            "was lost by choosing the recommended design rather than the "
+            "best exhaustive held-out design."
+        )
+
+        render_regret_graph(
+            model_summary
+        )
+
+        st.markdown(
+            "**Interpretation:** support-aware selection is particularly "
+            "strong for Random Forest and Extra Trees. It should not be "
+            "claimed to improve every regressor."
+        )
+
+        st.divider()
+
+
+        # ----------------------------------------------------
+        # Graph 2
+        # ----------------------------------------------------
+
+        st.markdown("#### B. Near-optimal success across models")
+
+        st.caption(
+            "This compares how many held-out devices each model keeps "
+            "inside the 0.5-percentage-point near-optimal threshold."
+        )
+
+        render_success_graph(
+            model_summary
+        )
+
+        st.divider()
+
+
+        # ----------------------------------------------------
+        # Graph 3
+        # ----------------------------------------------------
+
+        st.markdown(
+            "#### C. Prediction error is not the same as decision quality"
+        )
+
+        st.caption(
+            "A regression model may have reasonable average prediction "
+            "error yet still select a poor architecture. Recommendation "
+            "regret directly evaluates the design decision."
+        )
+
+        render_model_decision_graph(
+            model_summary
+        )
+
+        st.divider()
+
+
+        # ----------------------------------------------------
+        # Comparison table
+        # ----------------------------------------------------
+
+        st.markdown("#### Final model comparison")
+
+        wanted = [
+            "model",
+            "pooled_mae_pp",
+            "pooled_rmse_pp",
+            "pooled_r2",
+            "baseline_mean_regret_pp",
+            "guarded_mean_regret_pp",
+            "guarded_success_devices",
+            "target7_guarded_mean_regret_pp",
+            "target7_guarded_success_devices",
+        ]
+
+        wanted = [
+            c for c in wanted
+            if c in model_summary.columns
+        ]
+
+        table = model_summary[wanted].copy()
+
+        rename = {
+            "model": "Model",
+            "pooled_mae_pp": "Prediction MAE (pp)",
+            "pooled_rmse_pp": "Prediction RMSE (pp)",
+            "pooled_r2": "R²",
+            "baseline_mean_regret_pp": "Baseline regret (pp)",
+            "guarded_mean_regret_pp": "Guarded regret (pp)",
+            "guarded_success_devices": "Success / 10",
+            "target7_guarded_mean_regret_pp": "Target-7 regret (pp)",
+            "target7_guarded_success_devices": "Target-7 success / 7",
+        }
+
+        table = table.rename(
+            columns=rename
+        )
+
+        st.dataframe(
+            table.round(4),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        st.warning(
+            "Important counterexample: HistGradientBoosting shows that "
+            "support gating is not universally beneficial across all regressors."
+        )
+
+
+    # ========================================================
+    # TAB 3 — ROBUSTNESS
+    # ========================================================
+
+    with tab_robustness:
+
+        st.markdown(
+            "### Does the conclusion survive random initialization?"
+        )
+
+        sr1, sr2 = st.columns(2)
+
+        sr1.metric(
+            "RF target success",
+            "7/7 × 5 seeds",
+        )
+
+        sr2.metric(
+            "ET target success",
+            "7/7 × 5 seeds",
+        )
+
+        st.caption(
+            "Seeds tested: 0, 1, 7, 21 and 42."
+        )
+
+        render_seed_graph(
+            seed_summary
+        )
+
+        st.info(
+            "Near-optimal performance can remain stable even when the exact "
+            "chosen architecture changes. Performance reproducibility and "
+            "exact architectural reproducibility are different questions."
+        )
+
+        st.divider()
+
+
+        # ----------------------------------------------------
+        # Agreement
+        # ----------------------------------------------------
+
+        st.markdown(
+            "### Do different models choose the same architecture?"
+        )
+
+        render_agreement_graph(
+            pairwise
+        )
+
+        rf_et = pairwise[
+            (
+                (pairwise["model_a"] == "RandomForest")
+                & (pairwise["model_b"] == "ExtraTrees")
+            )
+            |
+            (
+                (pairwise["model_a"] == "ExtraTrees")
+                & (pairwise["model_b"] == "RandomForest")
+            )
+        ]
+
+        if not rf_et.empty:
+
+            row = rf_et.iloc[0]
+
+            a1, a2, a3 = st.columns(3)
+
+            a1.metric(
+                "RF ↔ ET exact configuration",
+                f"{float(row['exact_config_agreement_pct']):.1f}%",
+            )
+
+            a2.metric(
+                "Both near-optimal",
+                f"{int(row['both_success_devices'])}/10",
+            )
+
+            a3.metric(
+                "Target-7 both-success",
+                f"{float(row['target7_both_success_pct']):.1f}%",
+            )
+
+        st.caption(
+            "Exact agreement is stricter than successful recommendation: "
+            "two different architectures may both lie inside the near-optimal region."
+        )
+
+
+    # ========================================================
+    # TAB 4 — HARDWARE
+    # ========================================================
+
+    with tab_hardware:
+
+        st.markdown(
+            "### Circuit/system-level hardware evidence"
+        )
+
+        h1, h2, h3, h4 = st.columns(4)
+
+        h1.metric(
+            "Strategic points",
+            len(hardware),
+        )
+
+        h2.metric(
+            "Hardware devices",
+            hardware_devices,
+        )
+
+        h3.metric(
+            "Pareto-front points",
+            len(pareto_front),
+        )
+
+        if "energy_efficiency_TOPS_W" in hardware.columns:
+            h4.metric(
+                "Best observed efficiency",
+                f"{hardware['energy_efficiency_TOPS_W'].max():.2f} TOPS/W",
+            )
+
+        st.info(
+            "The hardware study contains 32 selected strategic NeuroSim "
+            "evaluations: four devices × eight configurations."
+        )
+
+
+        # ----------------------------------------------------
+        # Main Pareto graph
+        # ----------------------------------------------------
+
+        st.markdown(
+            "#### A. Latency vs dynamic energy"
+        )
+
+        st.caption(
+            "Each point is one evaluated hardware configuration. "
+            "Pareto-front points represent trade-offs for which improving "
+            "one objective would worsen another."
+        )
+
+        render_hardware_graph(
+            candidates
+        )
+
+        st.warning(
+            "There is no single universally best hardware point because "
+            "latency, energy, area, throughput and efficiency are competing objectives."
+        )
+
+        st.divider()
+
+
+        # ----------------------------------------------------
+        # Device comparison
+        # ----------------------------------------------------
+
+        if not hardware_summary.empty:
+
+            st.markdown(
+                "#### B. Device-by-device hardware comparison"
+            )
+
+            st.caption(
+                "The graph compares the best observed energy efficiency "
+                "within the eight strategic points evaluated for each device."
+            )
+
+            render_hardware_device_comparison(
+                hardware_summary
+            )
+
+            summary_cols = {
+                "device_id": "Device",
+                "validated_hardware_points": "Points",
+                "pareto_points": "Pareto",
+                "min_area_mm2": "Min area (mm²)",
+                "min_latency_us": "Min latency (µs)",
+                "min_dynamic_energy_uJ": "Min energy (µJ)",
+                "max_energy_efficiency_TOPS_W": "Max TOPS/W",
+                "max_throughput_TOPS": "Max TOPS",
+                "max_fps": "Max FPS",
+            }
+
+            valid_cols = [
+                c for c in summary_cols
+                if c in hardware_summary.columns
+            ]
+
+            hw_table = hardware_summary[
+                valid_cols
+            ].rename(
+                columns=summary_cols
+            )
+
+            if "Device" in hw_table.columns:
+                hw_table["Device"] = (
+                    hw_table["Device"]
+                    .map(display_device_name)
+                )
+
+            st.dataframe(
+                hw_table.round(4),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+
+        st.error(
+            "Boundary: these 32 NeuroSim evaluations are hardware "
+            "simulation evidence for a strategic subset. They are not "
+            "fabricated-chip measurements and do not directly validate "
+            "every final zero-shot recommendation."
+        )
+
+
+    # ========================================================
+    # TAB 5 — SCIENTIFIC BOUNDARY
+    # ========================================================
+
+    with tab_boundary:
+
+        st.markdown(
+            "### What the current study supports"
+        )
+
+        st.success(
+            "Evidence-aware, study-blocked cross-device learning can "
+            "recommend near-optimal accelerator configurations for the "
+            "held-out devices in the current literature-derived evidence base, "
+            "with particularly strong and robust results from Random Forest "
+            "and Extra Trees."
+        )
+
+        st.markdown(
+            "### What it does not yet establish"
+        )
+
+        b1, b2 = st.columns(2)
+
+        with b1:
+            with st.container(border=True):
+                st.markdown("#### Not demonstrated")
+                st.markdown(
+                    """
+                    - universal generalization to all memristors
+                    - fabricated-chip validation
+                    - measured chip energy or latency
+                    - measured chip area or power
+                    - direct hardware validation of every ML recommendation
+                    """
+                )
+
+        with b2:
+            with st.container(border=True):
+                st.markdown("#### Not claimed")
+                st.markdown(
+                    """
+                    - Random Forest itself is novel
+                    - NeuroSim itself is novel
+                    - quantized VGG8 is novel
+                    - software accuracy equals hardware-measured accuracy
+                    - the framework replaces circuit simulators or EDA
+                    """
+                )
+
+        st.markdown(
+            "### Strongest publication positioning"
+        )
+
+        st.info(
+            "Evidence-aware, study-blocked zero-shot transfer from "
+            "memristor device descriptors to near-optimal accelerator "
+            "configurations for previously unseen devices, with "
+            "validation-aware support handling, cross-model robustness "
+            "and separate circuit-level hardware evidence."
+        )
+
+
+        # ----------------------------------------------------
+        # Researcher-only raw evidence
+        # ----------------------------------------------------
+
+        if mode == "Researcher":
+
+            st.divider()
+
+            st.markdown(
+                "### Frozen evidence tables"
+            )
+
+            with st.expander(
+                "Model-level frozen results",
+                expanded=False,
+            ):
+                st.dataframe(
+                    _clean_public_device_columns(
+                        model_summary
+                    ).round(5),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+            with st.expander(
+                "Seed-level frozen results",
+                expanded=False,
+            ):
+                st.dataframe(
+                    _clean_public_device_columns(
+                        seed_summary
+                    ).round(5),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+            with st.expander(
+                "Cross-model agreement",
+                expanded=False,
+            ):
+                st.dataframe(
+                    _clean_public_device_columns(
+                        pairwise
+                    ).round(5),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+            with st.expander(
+                "Hardware Pareto front",
+                expanded=False,
+            ):
+                st.dataframe(
+                    _clean_public_device_columns(
+                        pareto_front
+                    ).round(5),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+
+# ============================================================
+# PROFESSIONAL GRAPH SYSTEM V4
+# ============================================================
+
+# Consistent research palette
+COLOR_RF = "#3B82F6"
+COLOR_ET = "#38BDF8"
+COLOR_GB = "#F59E0B"
+COLOR_HGB = "#8B5CF6"
+
+COLOR_GUARDED = "#22C55E"
+COLOR_BASELINE = "#94A3B8"
+COLOR_THRESHOLD = "#EF4444"
+
+COLOR_TAOX = "#38BDF8"
+COLOR_AU = "#F59E0B"
+COLOR_NI = "#22C55E"
+COLOR_PT = "#A78BFA"
+
+COLOR_TEXT = "#E5E7EB"
+COLOR_MUTED = "#94A3B8"
+COLOR_GRID = "#263244"
+
+
+def _professional_config():
+    return {
+        "background": "transparent",
+
+        "view": {
+            "stroke": None,
+        },
+
+        "axis": {
+            "labelColor": COLOR_TEXT,
+            "titleColor": COLOR_TEXT,
+            "gridColor": COLOR_GRID,
+            "gridOpacity": 0.55,
+            "domainColor": "#475569",
+            "tickColor": "#475569",
+            "labelFontSize": 12,
+            "titleFontSize": 13,
+            "titleFontWeight": 600,
+            "labelPadding": 8,
+            "titlePadding": 12,
+        },
+
+        "legend": {
+            "labelColor": COLOR_TEXT,
+            "titleColor": COLOR_TEXT,
+            "labelFontSize": 12,
+            "titleFontSize": 12,
+            "symbolSize": 110,
+            "padding": 10,
+        },
+
+        "title": {
+            "color": COLOR_TEXT,
+            "fontSize": 17,
+            "fontWeight": 700,
+            "subtitleColor": COLOR_MUTED,
+            "subtitleFontSize": 12,
+            "anchor": "start",
+            "offset": 14,
+        },
+    }
+
+
+def _model_color_scale():
+    return {
+        "domain": [
+            "Random Forest",
+            "Extra Trees",
+            "Gradient Boosting",
+            "HistGradientBoosting",
+        ],
+        "range": [
+            COLOR_RF,
+            COLOR_ET,
+            COLOR_GB,
+            COLOR_HGB,
+        ],
+    }
+
+
+# ============================================================
+# GRAPH 1 — BASELINE VS GUARDED REGRET
+# ============================================================
+
+def render_regret_graph(model_summary):
+
+    df = model_summary.copy()
+
+    df["Model"] = df["model"].map(_pretty_model)
+
+    plot = pd.DataFrame(
+        {
+            "Model": list(df["Model"]) * 2,
+
+            "Policy": (
+                ["Baseline"] * len(df)
+                + ["Support-gated"] * len(df)
+            ),
+
+            "Mean regret": (
+                list(df["baseline_mean_regret_pp"].astype(float))
+                + list(df["guarded_mean_regret_pp"].astype(float))
+            ),
+        }
+    )
+
+    model_order = [
+        "Random Forest",
+        "Extra Trees",
+        "Gradient Boosting",
+        "HistGradientBoosting",
+    ]
+
+    spec = {
+        "height": 390,
+
+        "title": {
+            "text": "Recommendation regret before and after support handling",
+            "subtitle": [
+                "Lower is better • dashed red line = 0.5 pp near-optimal threshold"
+            ],
+        },
+
+        "layer": [
+
+            # ------------------------------------------------
+            # grouped bars
+            # ------------------------------------------------
+            {
+                "mark": {
+                    "type": "bar",
+                    "cornerRadiusTopLeft": 5,
+                    "cornerRadiusTopRight": 5,
+                    "size": 28,
+                },
+
+                "encoding": {
+
+                    "x": {
+                        "field": "Model",
+                        "type": "nominal",
+                        "sort": model_order,
+
+                        "axis": {
+                            "title": None,
+                            "labelAngle": 0,
+                            "labelLimit": 170,
+                        },
+                    },
+
+                    "xOffset": {
+                        "field": "Policy",
+                    },
+
+                    "y": {
+                        "field": "Mean regret",
+                        "type": "quantitative",
+
+                        "axis": {
+                            "title": "Mean recommendation regret (pp)",
+                            "format": ".2f",
+                        },
+
+                        "scale": {
+                            "zero": True,
+                        },
+                    },
+
+                    "color": {
+                        "field": "Policy",
+                        "type": "nominal",
+
+                        "scale": {
+                            "domain": [
+                                "Baseline",
+                                "Support-gated",
+                            ],
+                            "range": [
+                                COLOR_BASELINE,
+                                COLOR_GUARDED,
+                            ],
+                        },
+
+                        "legend": {
+                            "title": None,
+                            "orient": "top",
+                            "direction": "horizontal",
+                        },
+                    },
+
+                    "tooltip": [
+                        {
+                            "field": "Model",
+                            "title": "Model",
+                        },
+                        {
+                            "field": "Policy",
+                            "title": "Policy",
+                        },
+                        {
+                            "field": "Mean regret",
+                            "title": "Mean regret (pp)",
+                            "format": ".3f",
+                        },
+                    ],
+                },
+            },
+
+            # ------------------------------------------------
+            # threshold line
+            # ------------------------------------------------
+            {
+                "mark": {
+                    "type": "rule",
+                    "color": COLOR_THRESHOLD,
+                    "strokeDash": [7, 5],
+                    "strokeWidth": 2,
+                },
+
+                "encoding": {
+                    "y": {
+                        "datum": 0.5,
+                    }
+                },
+            },
+
+            # threshold label
+            {
+                "mark": {
+                    "type": "text",
+                    "align": "right",
+                    "baseline": "bottom",
+                    "dx": -4,
+                    "dy": -4,
+                    "color": COLOR_THRESHOLD,
+                    "fontSize": 11,
+                    "fontWeight": 600,
+                },
+
+                "encoding": {
+                    "x": {
+                        "value": "width",
+                    },
+
+                    "y": {
+                        "datum": 0.5,
+                    },
+
+                    "text": {
+                        "value": "Near-optimal threshold 0.5 pp",
+                    },
+                },
+            },
+        ],
+
+        "config": _professional_config(),
+    }
+
+    st.vega_lite_chart(
+        plot,
+        spec,
+        use_container_width=True,
+    )
+
+
+# ============================================================
+# GRAPH 2 — SUCCESS COMPARISON
+# ============================================================
+
+def render_success_graph(model_summary):
+
+    df = model_summary.copy()
+
+    df["Model"] = df["model"].map(_pretty_model)
+
+    # Always derive the percentage directly from final counts when available.
+    if "guarded_success_devices" in df.columns:
+        df["All held-out"] = (
+            100
+            * df["guarded_success_devices"].astype(float)
+            / 10.0
+        )
+    else:
+        df["All held-out"] = df[
+            "guarded_success_pct"
+        ].astype(float)
+
+    if "target7_guarded_success_devices" in df.columns:
+        df["Target subset"] = (
+            100
+            * df["target7_guarded_success_devices"].astype(float)
+            / 7.0
+        )
+    else:
+        df["Target subset"] = np.nan
+
+    rows = []
+
+    for _, row in df.iterrows():
+
+        rows.append(
+            {
+                "Model": row["Model"],
+                "Evaluation": "All held-out devices",
+                "Success": float(row["All held-out"]),
+            }
+        )
+
+        if np.isfinite(row["Target subset"]):
+            rows.append(
+                {
+                    "Model": row["Model"],
+                    "Evaluation": "Target-7 subset",
+                    "Success": float(row["Target subset"]),
+                }
+            )
+
+    plot = pd.DataFrame(rows)
+
+    model_order = [
+        "Random Forest",
+        "Extra Trees",
+        "Gradient Boosting",
+        "HistGradientBoosting",
+    ]
+
+    spec = {
+        "height": 390,
+
+        "title": {
+            "text": "Near-optimal recommendation success",
+            "subtitle": [
+                "100% means every evaluated held-out device remained within 0.5 pp of the exhaustive best"
+            ],
+        },
+
+        "layer": [
+
+            {
+                "mark": {
+                    "type": "bar",
+                    "cornerRadiusTopLeft": 5,
+                    "cornerRadiusTopRight": 5,
+                    "size": 28,
+                },
+
+                "encoding": {
+
+                    "x": {
+                        "field": "Model",
+                        "type": "nominal",
+                        "sort": model_order,
+
+                        "axis": {
+                            "title": None,
+                            "labelAngle": 0,
+                            "labelLimit": 170,
+                        },
+                    },
+
+                    "xOffset": {
+                        "field": "Evaluation",
+                    },
+
+                    "y": {
+                        "field": "Success",
+                        "type": "quantitative",
+
+                        "scale": {
+                            "domain": [0, 100],
+                        },
+
+                        "axis": {
+                            "title": "Near-optimal success (%)",
+                            "values": [0, 25, 50, 75, 100],
+                        },
+                    },
+
+                    "color": {
+                        "field": "Evaluation",
+                        "type": "nominal",
+
+                        "scale": {
+                            "domain": [
+                                "All held-out devices",
+                                "Target-7 subset",
+                            ],
+                            "range": [
+                                COLOR_RF,
+                                COLOR_ET,
+                            ],
+                        },
+
+                        "legend": {
+                            "title": None,
+                            "orient": "top",
+                            "direction": "horizontal",
+                        },
+                    },
+
+                    "tooltip": [
+                        {
+                            "field": "Model",
+                            "title": "Model",
+                        },
+                        {
+                            "field": "Evaluation",
+                            "title": "Evaluation",
+                        },
+                        {
+                            "field": "Success",
+                            "title": "Success",
+                            "format": ".1f",
+                        },
+                    ],
+                },
+            },
+
+            # 100% guide line
+            {
+                "mark": {
+                    "type": "rule",
+                    "color": COLOR_GUARDED,
+                    "strokeDash": [4, 4],
+                    "opacity": 0.65,
+                },
+
+                "encoding": {
+                    "y": {
+                        "datum": 100,
+                    }
+                },
+            },
+        ],
+
+        "config": _professional_config(),
+    }
+
+    st.vega_lite_chart(
+        plot,
+        spec,
+        use_container_width=True,
+    )
+
+
+# ============================================================
+# GRAPH 3 — PREDICTION ERROR VS DECISION QUALITY
+# ============================================================
+
+def render_model_decision_graph(model_summary):
+
+    df = model_summary.copy()
+
+    df["Model"] = df["model"].map(_pretty_model)
+
+    df["Prediction MAE"] = (
+        df["pooled_mae_pp"].astype(float)
+    )
+
+    df["Decision regret"] = (
+        df["guarded_mean_regret_pp"].astype(float)
+    )
+
+    if "guarded_success_devices" in df.columns:
+        df["Success"] = (
+            100
+            * df["guarded_success_devices"].astype(float)
+            / 10
+        )
+    else:
+        df["Success"] = np.nan
+
+    spec = {
+        "height": 410,
+
+        "title": {
+            "text": "Prediction error versus recommendation quality",
+            "subtitle": [
+                "Bottom-left is desirable: low prediction MAE and low design regret"
+            ],
+        },
+
+        "layer": [
+
+            {
+                "mark": {
+                    "type": "point",
+                    "filled": True,
+                    "size": 260,
+                    "stroke": "#FFFFFF",
+                    "strokeWidth": 1.5,
+                },
+
+                "encoding": {
+
+                    "x": {
+                        "field": "Prediction MAE",
+                        "type": "quantitative",
+
+                        "axis": {
+                            "title": "Pooled prediction MAE (percentage points)",
+                            "format": ".2f",
+                        },
+
+                        "scale": {
+                            "zero": False,
+                            "nice": True,
+                        },
+                    },
+
+                    "y": {
+                        "field": "Decision regret",
+                        "type": "quantitative",
+
+                        "axis": {
+                            "title": "Guarded mean decision regret (pp)",
+                            "format": ".2f",
+                        },
+
+                        "scale": {
+                            "zero": True,
+                            "nice": True,
+                        },
+                    },
+
+                    "color": {
+                        "field": "Model",
+                        "type": "nominal",
+                        "scale": _model_color_scale(),
+
+                        "legend": {
+                            "title": None,
+                            "orient": "top",
+                        },
+                    },
+
+                    "tooltip": [
+                        {
+                            "field": "Model",
+                            "title": "Model",
+                        },
+                        {
+                            "field": "Prediction MAE",
+                            "title": "Prediction MAE (pp)",
+                            "format": ".3f",
+                        },
+                        {
+                            "field": "Decision regret",
+                            "title": "Decision regret (pp)",
+                            "format": ".3f",
+                        },
+                        {
+                            "field": "Success",
+                            "title": "Near-optimal success (%)",
+                            "format": ".1f",
+                        },
+                    ],
+                },
+            },
+
+            # model labels directly next to points
+            {
+                "mark": {
+                    "type": "text",
+                    "dx": 11,
+                    "dy": -9,
+                    "fontSize": 11,
+                    "fontWeight": 600,
+                    "color": COLOR_TEXT,
+                },
+
+                "encoding": {
+                    "x": {
+                        "field": "Prediction MAE",
+                        "type": "quantitative",
+                    },
+
+                    "y": {
+                        "field": "Decision regret",
+                        "type": "quantitative",
+                    },
+
+                    "text": {
+                        "field": "Model",
+                    },
+                },
+            },
+
+            # near-optimal decision line
+            {
+                "mark": {
+                    "type": "rule",
+                    "color": COLOR_THRESHOLD,
+                    "strokeDash": [7, 5],
+                    "strokeWidth": 1.5,
+                },
+
+                "encoding": {
+                    "y": {
+                        "datum": 0.5,
+                    },
+                },
+            },
+        ],
+
+        "config": _professional_config(),
+    }
+
+    st.vega_lite_chart(
+        df,
+        spec,
+        use_container_width=True,
+    )
+
+
+# ============================================================
+# GRAPH 4 — RANDOM-SEED ROBUSTNESS
+# ============================================================
+
+def render_seed_graph(seed_summary):
+
+    df = seed_summary.copy()
+
+    df["Model"] = df["model"].map(_pretty_model)
+    df["Seed"] = df["seed"].astype(str)
+
+    # Robustly detect target regret column
+    regret_candidates = [
+        "target7_guarded_mean_regret_pp",
+        "target_mean_regret_pp",
+        "guarded_mean_regret_target7_pp",
+    ]
+
+    regret_col = next(
+        (
+            c for c in regret_candidates
+            if c in df.columns
+        ),
+        None,
+    )
+
+    if regret_col is None:
+        st.warning(
+            "Seed-level target regret column is unavailable."
+        )
+        return
+
+    df["Target regret"] = df[
+        regret_col
+    ].astype(float)
+
+    df = df[
+        df["Model"].isin(
+            ["Random Forest", "Extra Trees"]
+        )
+    ].copy()
+
+    seed_order = [
+        "0",
+        "1",
+        "7",
+        "21",
+        "42",
+    ]
+
+    spec = {
+        "height": 380,
+
+        "title": {
+            "text": "Random-seed robustness of the leading models",
+            "subtitle": [
+                "Lower is better • five independently tested random seeds"
+            ],
+        },
+
+        "layer": [
+
+            # lines
+            {
+                "mark": {
+                    "type": "line",
+                    "strokeWidth": 3,
+                },
+
+                "encoding": {
+
+                    "x": {
+                        "field": "Seed",
+                        "type": "ordinal",
+                        "sort": seed_order,
+
+                        "axis": {
+                            "title": "Random seed",
+                            "labelAngle": 0,
+                        },
+                    },
+
+                    "y": {
+                        "field": "Target regret",
+                        "type": "quantitative",
+
+                        "axis": {
+                            "title": "Target mean regret (pp)",
+                            "format": ".3f",
+                        },
+
+                        "scale": {
+                            "zero": False,
+                            "nice": True,
+                        },
+                    },
+
+                    "color": {
+                        "field": "Model",
+                        "type": "nominal",
+
+                        "scale": {
+                            "domain": [
+                                "Random Forest",
+                                "Extra Trees",
+                            ],
+                            "range": [
+                                COLOR_RF,
+                                COLOR_ET,
+                            ],
+                        },
+
+                        "legend": {
+                            "title": None,
+                            "orient": "top",
+                        },
+                    },
+                },
+            },
+
+            # point markers
+            {
+                "mark": {
+                    "type": "point",
+                    "filled": True,
+                    "size": 115,
+                    "stroke": "#FFFFFF",
+                    "strokeWidth": 1,
+                },
+
+                "encoding": {
+
+                    "x": {
+                        "field": "Seed",
+                        "type": "ordinal",
+                        "sort": seed_order,
+                    },
+
+                    "y": {
+                        "field": "Target regret",
+                        "type": "quantitative",
+                    },
+
+                    "color": {
+                        "field": "Model",
+                        "type": "nominal",
+                        "scale": {
+                            "domain": [
+                                "Random Forest",
+                                "Extra Trees",
+                            ],
+                            "range": [
+                                COLOR_RF,
+                                COLOR_ET,
+                            ],
+                        },
+                        "legend": None,
+                    },
+
+                    "tooltip": [
+                        {
+                            "field": "Model",
+                            "title": "Model",
+                        },
+                        {
+                            "field": "Seed",
+                            "title": "Seed",
+                        },
+                        {
+                            "field": "Target regret",
+                            "title": "Mean regret (pp)",
+                            "format": ".4f",
+                        },
+                    ],
+                },
+            },
+
+            # threshold
+            {
+                "mark": {
+                    "type": "rule",
+                    "color": COLOR_THRESHOLD,
+                    "strokeDash": [7, 5],
+                    "opacity": 0.7,
+                },
+
+                "encoding": {
+                    "y": {
+                        "datum": 0.5,
+                    }
+                },
+            },
+        ],
+
+        "config": _professional_config(),
+    }
+
+    st.vega_lite_chart(
+        df,
+        spec,
+        use_container_width=True,
+    )
+
+
+# ============================================================
+# GRAPH 5 — CROSS-MODEL AGREEMENT
+# ============================================================
+
+def render_agreement_graph(pairwise):
+
+    df = pairwise.copy()
+
+    df["Model A"] = df["model_a"].map(_pretty_model)
+    df["Model B"] = df["model_b"].map(_pretty_model)
+
+    df["Comparison"] = (
+        df["Model A"]
+        + "  ↔  "
+        + df["Model B"]
+    )
+
+    df["Exact agreement"] = df[
+        "exact_config_agreement_pct"
+    ].astype(float)
+
+    df = df.sort_values(
+        "Exact agreement",
+        ascending=True,
+    )
+
+    spec = {
+        "height": max(
+            300,
+            58 * len(df),
+        ),
+
+        "title": {
+            "text": "Exact architecture agreement across models",
+            "subtitle": [
+                "Higher means the two models selected exactly the same accelerator configuration more often"
+            ],
+        },
+
+        "layer": [
+
+            {
+                "mark": {
+                    "type": "bar",
+                    "cornerRadiusEnd": 6,
+                    "size": 25,
+                    "color": COLOR_ET,
+                },
+
+                "encoding": {
+
+                    "y": {
+                        "field": "Comparison",
+                        "type": "nominal",
+                        "sort": {
+                            "field": "Exact agreement",
+                            "order": "ascending",
+                        },
+
+                        "axis": {
+                            "title": None,
+                            "labelLimit": 250,
+                        },
+                    },
+
+                    "x": {
+                        "field": "Exact agreement",
+                        "type": "quantitative",
+
+                        "scale": {
+                            "domain": [0, 100],
+                        },
+
+                        "axis": {
+                            "title": "Exact configuration agreement (%)",
+                            "values": [0, 25, 50, 75, 100],
+                        },
+                    },
+
+                    "tooltip": [
+                        {
+                            "field": "Comparison",
+                            "title": "Model pair",
+                        },
+                        {
+                            "field": "Exact agreement",
+                            "title": "Exact agreement",
+                            "format": ".1f",
+                        },
+                    ],
+                },
+            },
+
+            # numeric labels
+            {
+                "mark": {
+                    "type": "text",
+                    "align": "left",
+                    "dx": 7,
+                    "fontSize": 11,
+                    "fontWeight": 700,
+                    "color": COLOR_TEXT,
+                },
+
+                "encoding": {
+
+                    "y": {
+                        "field": "Comparison",
+                        "type": "nominal",
+                        "sort": {
+                            "field": "Exact agreement",
+                            "order": "ascending",
+                        },
+                    },
+
+                    "x": {
+                        "field": "Exact agreement",
+                        "type": "quantitative",
+                    },
+
+                    "text": {
+                        "field": "Exact agreement",
+                        "type": "quantitative",
+                        "format": ".1f",
+                    },
+                },
+            },
+        ],
+
+        "config": _professional_config(),
+    }
+
+    st.vega_lite_chart(
+        df,
+        spec,
+        use_container_width=True,
+    )
+
+
+# ============================================================
+# GRAPH 6 — HARDWARE PARETO
+# ============================================================
+
+def render_hardware_graph(candidates):
+
+    df = candidates.copy()
+
+    # --------------------------------------------------------
+    # Friendly device names
+    # --------------------------------------------------------
+
+    name_map = {
+        "TaOx_01": "TaOx",
+        "TiOx_02_Au": "TiOx–Au",
+        "TiOx_02_Ni": "TiOx–Ni",
+        "TiOx_02_Pt": "TiOx–Pt",
+    }
+
+    df["Device"] = (
+        df["device_id"]
+        .astype(str)
+        .map(name_map)
+        .fillna(
+            df["device_id"].astype(str)
+        )
+    )
+
+    # --------------------------------------------------------
+    # Find Pareto status column
+    # --------------------------------------------------------
+
+    pareto_col = None
+
+    for candidate in [
+        "device_pareto_optimal",
+        "pareto_optimal",
+        "is_pareto",
+    ]:
+        if candidate in df.columns:
+            pareto_col = candidate
+            break
+
+    if pareto_col is None:
+        df["Pareto"] = "Evaluated point"
+    else:
+        df["Pareto"] = np.where(
+            df[pareto_col].astype(bool),
+            "Pareto front",
+            "Evaluated point",
+        )
+
+    # --------------------------------------------------------
+    # Tooltip-friendly configuration
+    # --------------------------------------------------------
+
+    if {
+        "crossbar_size",
+        "requested_weight_bits",
+        "adc_bits",
+    }.issubset(df.columns):
+
+        df["Configuration"] = (
+            df["crossbar_size"].astype(int).astype(str)
+            + " × "
+            + df["crossbar_size"].astype(int).astype(str)
+            + " | W"
+            + df["requested_weight_bits"].astype(int).astype(str)
+            + " | ADC"
+            + df["adc_bits"].astype(int).astype(str)
+        )
+
+    else:
+        df["Configuration"] = "Strategic configuration"
+
+    # --------------------------------------------------------
+    # Plot
+    # --------------------------------------------------------
+
+    spec = {
+        "height": 470,
+
+        "title": {
+            "text": "Hardware design trade-off: latency versus dynamic energy",
+            "subtitle": [
+                "Bright large points = Pareto front • hover for configuration and additional hardware metrics"
+            ],
+        },
+
+        "layer": [
+
+            # dominated / all evaluated points
+            {
+                "transform": [
+                    {
+                        "filter": "datum.Pareto == 'Evaluated point'"
+                    }
+                ],
+
+                "mark": {
+                    "type": "point",
+                    "filled": True,
+                    "size": 105,
+                    "opacity": 0.35,
+                },
+
+                "encoding": {
+
+                    "x": {
+                        "field": "latency_us",
+                        "type": "quantitative",
+
+                        "axis": {
+                            "title": "Latency (µs)",
+                            "format": ".0f",
+                        },
+
+                        "scale": {
+                            "zero": False,
+                            "nice": True,
+                        },
+                    },
+
+                    "y": {
+                        "field": "dynamic_energy_uJ",
+                        "type": "quantitative",
+
+                        "axis": {
+                            "title": "Dynamic energy (µJ)",
+                            "format": ".1f",
+                        },
+
+                        "scale": {
+                            "zero": False,
+                            "nice": True,
+                        },
+                    },
+
+                    "color": {
+                        "field": "Device",
+                        "type": "nominal",
+
+                        "scale": {
+                            "domain": [
+                                "TaOx",
+                                "TiOx–Au",
+                                "TiOx–Ni",
+                                "TiOx–Pt",
+                            ],
+                            "range": [
+                                COLOR_TAOX,
+                                COLOR_AU,
+                                COLOR_NI,
+                                COLOR_PT,
+                            ],
+                        },
+
+                        "legend": {
+                            "title": "Device",
+                            "orient": "top",
+                        },
+                    },
+
+                    "tooltip": [
+                        {
+                            "field": "Device",
+                            "title": "Device",
+                        },
+                        {
+                            "field": "Configuration",
+                            "title": "Configuration",
+                        },
+                        {
+                            "field": "latency_us",
+                            "title": "Latency (µs)",
+                            "format": ".3f",
+                        },
+                        {
+                            "field": "dynamic_energy_uJ",
+                            "title": "Dynamic energy (µJ)",
+                            "format": ".3f",
+                        },
+                    ],
+                },
+            },
+
+            # Pareto points
+            {
+                "transform": [
+                    {
+                        "filter": "datum.Pareto == 'Pareto front'"
+                    }
+                ],
+
+                "mark": {
+                    "type": "point",
+                    "filled": True,
+                    "size": 230,
+                    "opacity": 1,
+                    "stroke": "#FFFFFF",
+                    "strokeWidth": 1.7,
+                },
+
+                "encoding": {
+
+                    "x": {
+                        "field": "latency_us",
+                        "type": "quantitative",
+                    },
+
+                    "y": {
+                        "field": "dynamic_energy_uJ",
+                        "type": "quantitative",
+                    },
+
+                    "color": {
+                        "field": "Device",
+                        "type": "nominal",
+
+                        "scale": {
+                            "domain": [
+                                "TaOx",
+                                "TiOx–Au",
+                                "TiOx–Ni",
+                                "TiOx–Pt",
+                            ],
+                            "range": [
+                                COLOR_TAOX,
+                                COLOR_AU,
+                                COLOR_NI,
+                                COLOR_PT,
+                            ],
+                        },
+
+                        "legend": None,
+                    },
+
+                    "tooltip": [
+                        {
+                            "field": "Device",
+                            "title": "Device",
+                        },
+                        {
+                            "field": "Configuration",
+                            "title": "Configuration",
+                        },
+                        {
+                            "field": "latency_us",
+                            "title": "Latency (µs)",
+                            "format": ".3f",
+                        },
+                        {
+                            "field": "dynamic_energy_uJ",
+                            "title": "Dynamic energy (µJ)",
+                            "format": ".3f",
+                        },
+                    ],
+                },
+            },
+        ],
+
+        "config": _professional_config(),
+    }
+
+    st.vega_lite_chart(
+        df,
+        spec,
+        use_container_width=True,
+    )
+
+    # --------------------------------------------------------
+    # Mini visual legend
+    # --------------------------------------------------------
+
+    c1, c2 = st.columns(2)
+
+    with c1:
+        st.caption(
+            "● Large outlined point = Pareto-front design"
+        )
+
+    with c2:
+        st.caption(
+            "● Smaller faded point = evaluated but dominated design"
+        )
+
+
+# ============================================================
+# GRAPH 7 — HARDWARE DEVICE COMPARISON
+# ============================================================
+
+def render_hardware_device_comparison(hardware_summary):
+
+    if hardware_summary.empty:
+        return
+
+    df = hardware_summary.copy()
+
+    name_map = {
+        "TaOx_01": "TaOx",
+        "TiOx_02_Au": "TiOx–Au",
+        "TiOx_02_Ni": "TiOx–Ni",
+        "TiOx_02_Pt": "TiOx–Pt",
+    }
+
+    df["Device"] = (
+        df["device_id"]
+        .astype(str)
+        .map(name_map)
+        .fillna(
+            df["device_id"].astype(str)
+        )
+    )
+
+    df["Efficiency"] = df[
+        "max_energy_efficiency_TOPS_W"
+    ].astype(float)
+
+    df = df.sort_values(
+        "Efficiency",
+        ascending=False,
+    )
+
+    spec = {
+        "height": 350,
+
+        "title": {
+            "text": "Best observed energy efficiency by device profile",
+            "subtitle": [
+                "Maximum TOPS/W among the eight strategic NeuroSim configurations evaluated for each device"
+            ],
+        },
+
+        "layer": [
+
+            {
+                "mark": {
+                    "type": "bar",
+                    "cornerRadiusTopLeft": 7,
+                    "cornerRadiusTopRight": 7,
+                    "size": 48,
+                },
+
+                "encoding": {
+
+                    "x": {
+                        "field": "Device",
+                        "type": "nominal",
+
+                        "sort": {
+                            "field": "Efficiency",
+                            "order": "descending",
+                        },
+
+                        "axis": {
+                            "title": None,
+                            "labelAngle": 0,
+                        },
+                    },
+
+                    "y": {
+                        "field": "Efficiency",
+                        "type": "quantitative",
+
+                        "axis": {
+                            "title": "Maximum energy efficiency (TOPS/W)",
+                            "format": ".1f",
+                        },
+
+                        "scale": {
+                            "zero": True,
+                        },
+                    },
+
+                    "color": {
+                        "field": "Device",
+                        "type": "nominal",
+
+                        "scale": {
+                            "domain": [
+                                "TaOx",
+                                "TiOx–Au",
+                                "TiOx–Ni",
+                                "TiOx–Pt",
+                            ],
+                            "range": [
+                                COLOR_TAOX,
+                                COLOR_AU,
+                                COLOR_NI,
+                                COLOR_PT,
+                            ],
+                        },
+
+                        "legend": None,
+                    },
+
+                    "tooltip": [
+                        {
+                            "field": "Device",
+                            "title": "Device",
+                        },
+                        {
+                            "field": "Efficiency",
+                            "title": "Maximum TOPS/W",
+                            "format": ".4f",
+                        },
+                    ],
+                },
+            },
+
+            # value labels
+            {
+                "mark": {
+                    "type": "text",
+                    "dy": -9,
+                    "fontSize": 12,
+                    "fontWeight": 700,
+                    "color": COLOR_TEXT,
+                },
+
+                "encoding": {
+
+                    "x": {
+                        "field": "Device",
+                        "type": "nominal",
+
+                        "sort": {
+                            "field": "Efficiency",
+                            "order": "descending",
+                        },
+                    },
+
+                    "y": {
+                        "field": "Efficiency",
+                        "type": "quantitative",
+                    },
+
+                    "text": {
+                        "field": "Efficiency",
+                        "type": "quantitative",
+                        "format": ".2f",
+                    },
+                },
+            },
+        ],
+
+        "config": _professional_config(),
+    }
+
+    st.vega_lite_chart(
+        df,
+        spec,
+        use_container_width=True,
+    )
+
+
+# ============================================================
+# HARDWARE GRAPH V4.1 — NaN SAFE + PUBLIC DEVICE NAMES
+# ============================================================
+
+PUBLIC_DEVICE_NAMES = {
+    "HfOx_01": "HfOx device 1",
+    "HfOx_02": "HfOx device 2",
+    "HfZrOx_01": "HfZrOx device",
+    "TaOx_01": "TaOx device",
+    "TiOx_02_Au": "TiOx-Au device",
+    "TiOx_02_Ni": "TiOx-Ni device",
+    "TiOx_02_Pt": "TiOx-Pt device",
+    "TiOx_03": "TiOx device 3",
+    "TiOx_04": "TiOx device 4",
+    "ZnO_01": "ZnO device",
+}
+
+
+def display_device_name(value):
+
+    if pd.isna(value):
+        return "Not available"
+
+    value = str(value)
+
+    return PUBLIC_DEVICE_NAMES.get(
+        value,
+        value.replace("_", " "),
+    )
+
+
+def _safe_int_text(value):
+
+    if pd.isna(value):
+        return None
+
+    try:
+        return str(int(float(value)))
+    except (TypeError, ValueError, OverflowError):
+        return str(value)
+
+
+def _hardware_config_label(row):
+
+    crossbar = _safe_int_text(
+        row.get("crossbar_size")
+    )
+
+    weight = _safe_int_text(
+        row.get("requested_weight_bits")
+    )
+
+    adc = _safe_int_text(
+        row.get("adc_bits")
+    )
+
+    parts = []
+
+    if crossbar is not None:
+        parts.append(
+            f"{crossbar} × {crossbar}"
+        )
+
+    if weight is not None:
+        parts.append(
+            f"W{weight}"
+        )
+
+    if adc is not None:
+        parts.append(
+            f"ADC{adc}"
+        )
+
+    if not parts:
+        return "Strategic hardware point"
+
+    return " | ".join(parts)
+
+
+def _clean_public_device_columns(df):
+
+    out = df.copy()
+
+    for col in [
+        "device_id",
+        "held_out_device",
+        "nearest_known_device",
+        "matched_device_id",
+        "Matched Device",
+        "Device",
+    ]:
+        if col in out.columns:
+            out[col] = (
+                out[col]
+                .map(display_device_name)
+            )
+
+    return out
+
+
+def render_hardware_graph(candidates):
+
+    df = candidates.copy()
+
+    # --------------------------------------------------------
+    # Required graph quantities
+    # --------------------------------------------------------
+
+    required = [
+        "device_id",
+        "latency_us",
+        "dynamic_energy_uJ",
+    ]
+
+    missing = [
+        c for c in required
+        if c not in df.columns
+    ]
+
+    if missing:
+        st.warning(
+            "Hardware trade-off graph cannot be rendered because "
+            f"the following fields are unavailable: {', '.join(missing)}."
+        )
+        return
+
+
+    # --------------------------------------------------------
+    # Numeric cleanup
+    # --------------------------------------------------------
+
+    df["latency_us"] = pd.to_numeric(
+        df["latency_us"],
+        errors="coerce",
+    )
+
+    df["dynamic_energy_uJ"] = pd.to_numeric(
+        df["dynamic_energy_uJ"],
+        errors="coerce",
+    )
+
+    # A point cannot be plotted without x/y.
+    df = df.dropna(
+        subset=[
+            "latency_us",
+            "dynamic_energy_uJ",
+        ]
+    ).copy()
+
+    if df.empty:
+        st.warning(
+            "No valid latency/energy hardware points are available "
+            "for plotting."
+        )
+        return
+
+
+    # --------------------------------------------------------
+    # Public names
+    # --------------------------------------------------------
+
+    df["Device"] = (
+        df["device_id"]
+        .map(display_device_name)
+    )
+
+
+    # --------------------------------------------------------
+    # Safe configuration tooltip
+    # Missing configuration fields do NOT break graph.
+    # --------------------------------------------------------
+
+    df["Configuration"] = df.apply(
+        _hardware_config_label,
+        axis=1,
+    )
+
+
+    # --------------------------------------------------------
+    # Pareto status
+    # --------------------------------------------------------
+
+    pareto_col = None
+
+    for candidate in [
+        "device_pareto_optimal",
+        "pareto_optimal",
+        "is_pareto",
+    ]:
+        if candidate in df.columns:
+            pareto_col = candidate
+            break
+
+    if pareto_col is None:
+
+        df["Pareto"] = "Evaluated point"
+
+    else:
+
+        raw = df[pareto_col]
+
+        # robust handling for bool / 0-1 / strings
+        is_pareto = (
+            raw.astype(str)
+            .str.strip()
+            .str.lower()
+            .isin(
+                [
+                    "true",
+                    "1",
+                    "yes",
+                    "y",
+                ]
+            )
+        )
+
+        # preserve native bools too
+        if raw.dtype == bool:
+            is_pareto = raw
+
+        df["Pareto"] = np.where(
+            is_pareto,
+            "Pareto front",
+            "Evaluated point",
+        )
+
+
+    # --------------------------------------------------------
+    # Color domain
+    # --------------------------------------------------------
+
+    device_domain = [
+        "TaOx device",
+        "TiOx-Au device",
+        "TiOx-Ni device",
+        "TiOx-Pt device",
+    ]
+
+    device_range = [
+        COLOR_TAOX,
+        COLOR_AU,
+        COLOR_NI,
+        COLOR_PT,
+    ]
+
+
+    # --------------------------------------------------------
+    # Base tooltip
+    # --------------------------------------------------------
+
+    tooltip = [
+        {
+            "field": "Device",
+            "title": "Device",
+        },
+        {
+            "field": "Configuration",
+            "title": "Configuration",
+        },
+        {
+            "field": "latency_us",
+            "title": "Latency (µs)",
+            "format": ".3f",
+        },
+        {
+            "field": "dynamic_energy_uJ",
+            "title": "Dynamic energy (µJ)",
+            "format": ".3f",
+        },
+    ]
+
+    optional_tooltips = [
+        (
+            "chip_area_mm2",
+            "Chip area (mm²)",
+            ".4f",
+        ),
+        (
+            "energy_efficiency_TOPS_W",
+            "Energy efficiency (TOPS/W)",
+            ".4f",
+        ),
+        (
+            "throughput_TOPS",
+            "Throughput (TOPS)",
+            ".4f",
+        ),
+        (
+            "fps",
+            "FPS",
+            ".2f",
+        ),
+    ]
+
+    for field, title, fmt in optional_tooltips:
+        if field in df.columns:
+            tooltip.append(
+                {
+                    "field": field,
+                    "title": title,
+                    "format": fmt,
+                }
+            )
+
+
+    # --------------------------------------------------------
+    # Professional scatter plot
+    # --------------------------------------------------------
+
+    spec = {
+        "height": 470,
+
+        "title": {
+            "text": (
+                "Hardware design trade-off: "
+                "latency versus dynamic energy"
+            ),
+            "subtitle": [
+                "Large outlined points = Pareto front",
+                "Smaller faded points = other evaluated strategic configurations",
+            ],
+        },
+
+        "layer": [
+
+            # ================================================
+            # All non-Pareto evaluated points
+            # ================================================
+
+            {
+                "transform": [
+                    {
+                        "filter":
+                            "datum.Pareto == 'Evaluated point'"
+                    }
+                ],
+
+                "mark": {
+                    "type": "point",
+                    "filled": True,
+                    "size": 115,
+                    "opacity": 0.32,
+                },
+
+                "encoding": {
+
+                    "x": {
+                        "field": "latency_us",
+                        "type": "quantitative",
+
+                        "axis": {
+                            "title": "Latency (µs)",
+                            "format": ".0f",
+                        },
+
+                        "scale": {
+                            "zero": False,
+                            "nice": True,
+                        },
+                    },
+
+                    "y": {
+                        "field": "dynamic_energy_uJ",
+                        "type": "quantitative",
+
+                        "axis": {
+                            "title": "Dynamic energy (µJ)",
+                            "format": ".1f",
+                        },
+
+                        "scale": {
+                            "zero": False,
+                            "nice": True,
+                        },
+                    },
+
+                    "color": {
+                        "field": "Device",
+                        "type": "nominal",
+
+                        "scale": {
+                            "domain": device_domain,
+                            "range": device_range,
+                        },
+
+                        "legend": {
+                            "title": "Device profile",
+                            "orient": "top",
+                        },
+                    },
+
+                    "tooltip": tooltip,
+                },
+            },
+
+
+            # ================================================
+            # Pareto front
+            # ================================================
+
+            {
+                "transform": [
+                    {
+                        "filter":
+                            "datum.Pareto == 'Pareto front'"
+                    }
+                ],
+
+                "mark": {
+                    "type": "point",
+                    "filled": True,
+                    "size": 245,
+                    "opacity": 1,
+                    "stroke": "#FFFFFF",
+                    "strokeWidth": 1.8,
+                },
+
+                "encoding": {
+
+                    "x": {
+                        "field": "latency_us",
+                        "type": "quantitative",
+                    },
+
+                    "y": {
+                        "field": "dynamic_energy_uJ",
+                        "type": "quantitative",
+                    },
+
+                    "color": {
+                        "field": "Device",
+                        "type": "nominal",
+
+                        "scale": {
+                            "domain": device_domain,
+                            "range": device_range,
+                        },
+
+                        "legend": None,
+                    },
+
+                    "tooltip": tooltip,
+                },
+            },
+        ],
+
+        "config": _professional_config(),
+    }
+
+    st.vega_lite_chart(
+        df,
+        spec,
+        use_container_width=True,
+    )
+
+    legend_left, legend_right = st.columns(2)
+
+    legend_left.caption(
+        "Large outlined point = Pareto-front hardware design"
+    )
+
+    legend_right.caption(
+        "Small faded point = evaluated but dominated design"
+    )
+
+
+# ============================================================
+# SAFE HARDWARE DEVICE COMPARISON
+# ============================================================
+
+def render_hardware_device_comparison(
+    hardware_summary,
+):
+
+    if hardware_summary.empty:
+        return
+
+    df = hardware_summary.copy()
+
+    if (
+        "device_id" not in df.columns
+        or
+        "max_energy_efficiency_TOPS_W"
+        not in df.columns
+    ):
+        st.warning(
+            "Hardware device comparison fields are unavailable."
+        )
+        return
+
+    df["Device"] = (
+        df["device_id"]
+        .map(display_device_name)
+    )
+
+    df["Efficiency"] = pd.to_numeric(
+        df["max_energy_efficiency_TOPS_W"],
+        errors="coerce",
+    )
+
+    df = df.dropna(
+        subset=["Efficiency"]
+    ).copy()
+
+    if df.empty:
+        return
+
+    df = df.sort_values(
+        "Efficiency",
+        ascending=False,
+    )
+
+    domain = [
+        "TaOx device",
+        "TiOx-Au device",
+        "TiOx-Ni device",
+        "TiOx-Pt device",
+    ]
+
+    colors = [
+        COLOR_TAOX,
+        COLOR_AU,
+        COLOR_NI,
+        COLOR_PT,
+    ]
+
+    spec = {
+        "height": 360,
+
+        "title": {
+            "text": (
+                "Best observed energy efficiency "
+                "by device profile"
+            ),
+            "subtitle": [
+                "Maximum TOPS/W among the eight strategic NeuroSim points evaluated per device"
+            ],
+        },
+
+        "layer": [
+
+            {
+                "mark": {
+                    "type": "bar",
+                    "cornerRadiusTopLeft": 7,
+                    "cornerRadiusTopRight": 7,
+                    "size": 52,
+                },
+
+                "encoding": {
+
+                    "x": {
+                        "field": "Device",
+                        "type": "nominal",
+
+                        "sort": {
+                            "field": "Efficiency",
+                            "order": "descending",
+                        },
+
+                        "axis": {
+                            "title": None,
+                            "labelAngle": 0,
+                        },
+                    },
+
+                    "y": {
+                        "field": "Efficiency",
+                        "type": "quantitative",
+
+                        "axis": {
+                            "title":
+                                "Maximum energy efficiency (TOPS/W)",
+                            "format": ".1f",
+                        },
+
+                        "scale": {
+                            "zero": True,
+                        },
+                    },
+
+                    "color": {
+                        "field": "Device",
+                        "type": "nominal",
+
+                        "scale": {
+                            "domain": domain,
+                            "range": colors,
+                        },
+
+                        "legend": None,
+                    },
+
+                    "tooltip": [
+                        {
+                            "field": "Device",
+                            "title": "Device",
+                        },
+                        {
+                            "field": "Efficiency",
+                            "title": "Maximum TOPS/W",
+                            "format": ".4f",
+                        },
+                    ],
+                },
+            },
+
+            {
+                "mark": {
+                    "type": "text",
+                    "dy": -10,
+                    "fontSize": 12,
+                    "fontWeight": 700,
+                    "color": COLOR_TEXT,
+                },
+
+                "encoding": {
+
+                    "x": {
+                        "field": "Device",
+                        "type": "nominal",
+
+                        "sort": {
+                            "field": "Efficiency",
+                            "order": "descending",
+                        },
+                    },
+
+                    "y": {
+                        "field": "Efficiency",
+                        "type": "quantitative",
+                    },
+
+                    "text": {
+                        "field": "Efficiency",
+                        "type": "quantitative",
+                        "format": ".2f",
+                    },
+                },
+            },
+        ],
+
+        "config": _professional_config(),
+    }
+
+    st.vega_lite_chart(
+        df,
+        spec,
+        use_container_width=True,
+    )

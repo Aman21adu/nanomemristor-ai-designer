@@ -232,6 +232,76 @@ def inject_final_public_style():
         """)
 
 
+
+
+
+# GLOBAL NO-TRUNCATION STYLE
+def inject_no_truncation_style():
+    _html("""
+    <style>
+
+    /* ======================================================
+       NEVER SHOW ... IN METRIC CARDS
+       Wrap complete words instead.
+       ====================================================== */
+
+    div[data-testid="stMetric"] {
+        min-width: 0 !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
+
+    div[data-testid="stMetricLabel"],
+    div[data-testid="stMetricLabel"] *,
+    div[data-testid="stMetricValue"],
+    div[data-testid="stMetricValue"] *,
+    div[data-testid="stMetricDelta"],
+    div[data-testid="stMetricDelta"] * {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        max-width: 100% !important;
+    }
+
+    div[data-testid="stMetricLabel"] p {
+        line-height: 1.25 !important;
+        min-height: 1.5rem !important;
+    }
+
+    div[data-testid="stMetricValue"] {
+        line-height: 1.08 !important;
+    }
+
+    /*
+       Same rule for our custom cards.
+       Never intentionally shorten text with ellipsis.
+    */
+
+    .public-card,
+    .public-card *,
+    .pub-position,
+    .pub-position *,
+    .workflow-card,
+    .workflow-card *,
+    .why-card,
+    .why-card *,
+    .info-card,
+    .info-card *,
+    .callout,
+    .callout * {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+    }
+
+    </style>
+    """)
+
+
 def render_home_hero(
     device_count: int,
     study_count: int,
@@ -253,56 +323,61 @@ def render_home_hero(
         model_summary["model"] == "ExtraTrees"
     ].iloc[0]
 
+    # ============================================================
+    # HERO
+    # ============================================================
+
     _html("""
-        <div class="final-hero">
+    <div class="final-hero">
 
-            <div class="final-badge">
-                Research prototype • Nano + AI + chip design
-            </div>
-
-            <div class="final-title">
-                From a memristor device
-                to an accelerator design recommendation.
-            </div>
-
-            <div class="final-subtitle">
-                NanoMemristor AI Designer learns transferable relationships
-                across experimentally characterized memristor technologies,
-                screens accelerator configurations for a held-out or new
-                device, checks whether the recommendation is supported,
-                and helps prioritize what should receive detailed
-                circuit-level validation next.
-            </div>
-
-            <div class="flow-strip">
-                <span class="flow-node">Device evidence</span>
-                <span class="flow-arrow">→</span>
-
-                <span class="flow-node">Cross-device AI</span>
-                <span class="flow-arrow">→</span>
-
-                <span class="flow-node">Support check</span>
-                <span class="flow-arrow">→</span>
-
-                <span class="flow-node">Prioritize design</span>
-                <span class="flow-arrow">→</span>
-
-                <span class="flow-node">Validate</span>
-            </div>
-
+        <div class="final-badge">
+            RESEARCH PROTOTYPE • NANOTECHNOLOGY + AI + CHIP DESIGN
         </div>
-        """)
 
-    # --------------------------------------------------------
-    # Core evidence
-    # --------------------------------------------------------
+        <div class="final-title">
+            From a memristor device<br>
+            to an accelerator design recommendation.
+        </div>
+
+        <div class="final-subtitle">
+            NanoMemristor AI Designer uses evidence from characterized
+            memristor technologies to screen accelerator design choices
+            for a held-out or new device — then checks whether the
+            recommendation is sufficiently supported before detailed
+            hardware validation.
+        </div>
+
+        <div class="flow-strip">
+            <span class="flow-node">Device evidence</span>
+            <span class="flow-arrow">→</span>
+
+            <span class="flow-node">Cross-device AI</span>
+            <span class="flow-arrow">→</span>
+
+            <span class="flow-node">Support check</span>
+            <span class="flow-arrow">→</span>
+
+            <span class="flow-node">Prioritize</span>
+            <span class="flow-arrow">→</span>
+
+            <span class="flow-node">Validate</span>
+        </div>
+
+    </div>
+    """)
+
+    # ============================================================
+    # DATA SNAPSHOT
+    # ============================================================
+
+    st.markdown("### Research evidence at a glance")
 
     c1, c2, c3, c4 = st.columns(4)
 
     c1.metric(
         "Device profiles",
         device_count,
-        help="Simulation-ready literature-derived memristor profiles.",
+        help="Literature-derived simulation-ready memristor profiles.",
     )
 
     c2.metric(
@@ -311,9 +386,9 @@ def render_home_hero(
     )
 
     c3.metric(
-        "Design cases",
+        "Device × design cases",
         f"{total_simulation_rows:,}",
-        help="245 accelerator configurations for each of 10 device profiles.",
+        help="10 devices × 245 accelerator configurations.",
     )
 
     c4.metric(
@@ -321,109 +396,187 @@ def render_home_hero(
         model_summary["model"].nunique(),
     )
 
-    st.caption(
-        f"{family_count} technology families • "
-        f"{seed_summary['seed'].nunique()} random seeds • "
-        f"{len(hardware)} strategic NeuroSim points • "
-        f"{len(pareto_front)} Pareto-front hardware points"
+    c5, c6, c7 = st.columns(3)
+
+    c5.metric(
+        "Random seeds",
+        seed_summary["seed"].nunique(),
     )
 
-    st.write("")
+    c6.metric(
+        "NeuroSim points",
+        len(hardware),
+    )
 
-    # --------------------------------------------------------
-    # Problem → solution → output
-    # --------------------------------------------------------
+    c7.metric(
+        "Hardware Pareto points",
+        len(pareto_front),
+    )
+
+    st.caption(
+        f"{family_count} technology families represented in the current evidence base."
+    )
+
+    st.divider()
+
+    # ============================================================
+    # PROBLEM → APPROACH → OUTPUT
+    # ============================================================
+
+    st.markdown("### Why the problem matters")
 
     p1, p2, p3 = st.columns(3)
 
     with p1:
         _html("""
-            <div class="public-card">
-                <div class="public-card-kicker">Problem</div>
-                <div class="public-card-title">
-                    A better device is not automatically a better accelerator.
-                </div>
-                <div class="public-card-text">
-                    Memristor technologies differ in switching behavior,
-                    dynamic range and available states. Each new device can
-                    change the preferred crossbar, weight and ADC design.
-                </div>
+        <div class="public-card">
+            <div class="public-card-kicker">01 • Problem</div>
+
+            <div class="public-card-title">
+                A better memristor is not automatically
+                a better AI accelerator.
             </div>
-            """)
+
+            <div class="public-card-text">
+                Device behavior changes the accelerator design space.
+                Crossbar size, weight precision and ADC precision can
+                become better or worse depending on the device.
+            </div>
+        </div>
+        """)
 
     with p2:
         _html("""
-            <div class="public-card">
-                <div class="public-card-kicker">Approach</div>
-                <div class="public-card-title">
-                    Cross-device AI + support check
-                </div>
-                <div class="public-card-text">
-                    Learn from characterized technologies, hold the target
-                    device out of training, then check whether the recommendation
-                    lies inside supported descriptor space before trusting
-                    cost-oriented optimization.
-                </div>
+        <div class="public-card">
+            <div class="public-card-kicker">02 • Approach</div>
+
+            <div class="public-card-title">
+                Cross-device AI + support check
             </div>
-            """)
+
+            <div class="public-card-text">
+                Learn transferable relationships from characterized
+                devices, leave the target device out of training,
+                generate a recommendation, then check whether the
+                target lies inside supported evidence space.
+            </div>
+        </div>
+        """)
 
     with p3:
         _html("""
-            <div class="public-card">
-                <div class="public-card-kicker">Output</div>
-                <div class="public-card-title">
-                    What deserves detailed validation next?
-                </div>
-                <div class="public-card-text">
-                    The system proposes a crossbar size, weight precision
-                    and ADC precision as an early-stage screening decision.
-                    Detailed simulators and EDA remain the validation layer.
-                </div>
+        <div class="public-card">
+            <div class="public-card-kicker">03 • Decision</div>
+
+            <div class="public-card-title">
+                Decide what deserves detailed validation next.
             </div>
-            """)
 
-    st.write("")
+            <div class="public-card-text">
+                The system proposes a promising accelerator starting
+                configuration for screening. Detailed simulators and
+                EDA remain the final validation layer.
+            </div>
+        </div>
+        """)
 
-    # --------------------------------------------------------
-    # Main final results
-    # --------------------------------------------------------
+    st.divider()
 
-    st.markdown("### Final research snapshot")
+    # ============================================================
+    # HEADLINE RESULTS
+    # ============================================================
+
+    st.markdown("### Final recommendation results")
 
     r1, r2, r3, r4 = st.columns(4)
 
     r1.metric(
         "Random Forest",
-        f"{int(rf['guarded_success_devices'])}/10 near-optimal",
+        f"{int(rf['guarded_success_devices'])}/10",
         f"{float(rf['guarded_mean_regret_pp']):.3f} pp regret",
+        help="Held-out devices within the 0.5 percentage-point near-optimal threshold.",
     )
 
     r2.metric(
         "Extra Trees",
-        f"{int(et['guarded_success_devices'])}/10 near-optimal",
+        f"{int(et['guarded_success_devices'])}/10",
         f"{float(et['guarded_mean_regret_pp']):.3f} pp regret",
+        help="Held-out devices within the 0.5 percentage-point near-optimal threshold.",
     )
 
     r3.metric(
         "Seed robustness",
-        "7/7 × 5 seeds",
-        help=(
-            "RF and Extra Trees each maintained near-optimal "
-            "target-device success across all five tested seeds."
-        ),
+        "7/7 × 5",
+        "target devices",
+        help="Near-optimal target-device success across five tested random seeds.",
     )
 
     r4.metric(
         "Hardware evidence",
-        f"{len(hardware)} NeuroSim points",
-        f"{len(pareto_front)} Pareto points",
+        f"{len(hardware)} points",
+        f"{len(pareto_front)} Pareto",
+        help="Strategic NeuroSim circuit/system-level evaluations.",
     )
 
-    st.info(
-        "Positioning: NanoMemristor AI Designer does not replace NeuroSim, "
-        "SPICE or EDA. It screens and prioritizes promising configurations "
-        "so detailed validation can focus on better candidates."
+    st.caption(
+        "Near-optimal = recommendation regret ≤ 0.5 percentage points "
+        "in the current study-blocked evaluation."
     )
+
+    st.divider()
+
+    # ============================================================
+    # PRODUCT / RESEARCH POSITIONING
+    # ============================================================
+
+    st.markdown("### Where NanoMemristor AI Designer fits")
+
+    a, b = st.columns([1.15, 1])
+
+    with a:
+        _html("""
+        <div class="pub-position">
+
+            <div class="public-card-kicker">
+                SCREEN → PRIORITIZE → VALIDATE
+            </div>
+
+            <div class="pub-position-title">
+                Reduce the search space before expensive validation.
+            </div>
+
+            <div class="pub-position-text">
+                The goal is not to replace detailed circuit simulators.
+                It is to help researchers identify which device–architecture
+                combinations deserve deeper simulation or EDA-level
+                validation first.
+            </div>
+
+        </div>
+        """)
+
+    with b:
+        st.markdown(
+            """
+            **Use this site to:**
+
+            - check a known memristor profile,
+            - explore a custom device,
+            - reverse-search desirable device properties,
+            - inspect research gaps,
+            - compare ML robustness,
+            - inspect NeuroSim hardware trade-offs,
+            - review provenance and limitations.
+            """
+        )
+
+    st.info(
+        "Scientific boundary: zero-shot recommendations are ML predictions; "
+        "VGG8/CIFAR-10 results are software accuracy; NeuroSim values are "
+        "circuit/system-level estimates. They are complementary evidence layers, "
+        "not one fabricated-chip experiment."
+    )
+
 
 
 def render_publication_positioning():
@@ -497,3 +650,316 @@ def render_publication_positioning():
                 </div>
             </div>
             """)
+
+
+# ============================================================
+# PUBLICATION + SOURCES V2
+# ============================================================
+
+def render_publication_positioning_v2():
+
+    data = load_publication_evidence()
+
+    model_summary = data["model_summary"]
+    device_results = data["device_results"]
+    seed_summary = data["seed_summary"]
+    hardware = data["hardware"]
+    pareto_front = data["pareto_front"]
+
+    rf = model_summary[
+        model_summary["model"] == "RandomForest"
+    ].iloc[0]
+
+    et = model_summary[
+        model_summary["model"] == "ExtraTrees"
+    ].iloc[0]
+
+
+    # ========================================================
+    # CONTRIBUTION
+    # ========================================================
+
+    st.markdown("### Research contribution")
+
+    st.info(
+        "Evidence-aware, study-blocked zero-shot transfer from memristor "
+        "device descriptors to near-optimal accelerator configurations for "
+        "previously unseen devices, with validation-aware support handling, "
+        "cross-model robustness and separate circuit-level hardware evidence."
+    )
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        with st.container(border=True):
+            st.markdown("#### Contribution")
+            st.markdown(
+                """
+                **Cross-device device → architecture recommendation**
+
+                The target device is excluded from training, and the model
+                must recommend an accelerator configuration using evidence
+                learned from other characterized technologies.
+                """
+            )
+
+    with c2:
+        with st.container(border=True):
+            st.markdown("#### Evidence-aware safeguard")
+            st.markdown(
+                """
+                **Support before aggressive optimization**
+
+                The workflow checks whether the target is sufficiently
+                represented before trusting cost-oriented selection.
+                Unsupported regions use a conservative accuracy-first fallback.
+                """
+            )
+
+    with c3:
+        with st.container(border=True):
+            st.markdown("#### Hardware connection")
+            st.markdown(
+                """
+                **ML recommendation + separate circuit evidence**
+
+                Strategic configurations are evaluated with NeuroSim to
+                expose latency, energy, area, throughput and efficiency
+                trade-offs without claiming fabricated-chip validation.
+                """
+            )
+
+
+    st.divider()
+
+
+    # ========================================================
+    # WHAT IS NEW VS WHAT IS USED
+    # ========================================================
+
+    st.markdown("### What is the contribution — and what is not claimed as new?")
+
+    n1, n2 = st.columns(2)
+
+    with n1:
+        with st.container(border=True):
+            st.markdown("#### Contribution of this research")
+
+            st.markdown(
+                """
+                - study-blocked unseen-device transfer
+                - memristor descriptors → accelerator recommendation
+                - validation-aware support handling
+                - recommendation-quality evaluation using regret
+                - multi-model and multi-seed robustness
+                - separate circuit/system hardware evidence
+                """
+            )
+
+    with n2:
+        with st.container(border=True):
+            st.markdown("#### Existing methods used as building blocks")
+
+            st.markdown(
+                """
+                - Random Forest / Extra Trees / boosting regressors
+                - quantized VGG8 / CIFAR-10 software evaluation
+                - Pareto analysis
+                - NeuroSim circuit/system simulation
+                - standard regression metrics such as MAE and RMSE
+                """
+            )
+
+    st.caption(
+        "The research contribution is the integrated evidence-aware "
+        "cross-device co-design formulation and validation framework — "
+        "not a claim that the individual ML algorithms or NeuroSim are new."
+    )
+
+
+    st.divider()
+
+
+    # ========================================================
+    # FINAL EVIDENCE SNAPSHOT
+    # ========================================================
+
+    st.markdown("### Final publication evidence")
+
+    p1, p2, p3, p4 = st.columns(4)
+
+    p1.metric(
+        "Held-out devices",
+        device_results["held_out_device"].nunique(),
+    )
+
+    p2.metric(
+        "ML models",
+        model_summary["model"].nunique(),
+    )
+
+    p3.metric(
+        "Random seeds",
+        seed_summary["seed"].nunique(),
+    )
+
+    p4.metric(
+        "NeuroSim points",
+        len(hardware),
+    )
+
+    r1, r2, r3, r4 = st.columns(4)
+
+    r1.metric(
+        "Random Forest",
+        f"{int(rf['guarded_success_devices'])}/10",
+        f"{float(rf['guarded_mean_regret_pp']):.3f} pp regret",
+    )
+
+    r2.metric(
+        "Extra Trees",
+        f"{int(et['guarded_success_devices'])}/10",
+        f"{float(et['guarded_mean_regret_pp']):.3f} pp regret",
+    )
+
+    r3.metric(
+        "Hardware Pareto points",
+        len(pareto_front),
+    )
+
+    r4.metric(
+        "Target robustness",
+        "7/7 × 5 seeds",
+    )
+
+
+    st.divider()
+
+
+    # ========================================================
+    # EVIDENCE CHAIN
+    # ========================================================
+
+    st.markdown("### Evidence chain")
+
+    e1, e2, e3, e4 = st.columns(4)
+
+    with e1:
+        with st.container(border=True):
+            st.markdown("#### ① Device evidence")
+            st.caption(
+                "Literature-derived memristor profiles with source, "
+                "stack, descriptors and provenance."
+            )
+
+    with e2:
+        with st.container(border=True):
+            st.markdown("#### ② Zero-shot ML")
+            st.caption(
+                "Target device/study is withheld while the model learns "
+                "from the remaining evidence."
+            )
+
+    with e3:
+        with st.container(border=True):
+            st.markdown("#### ③ Decision validation")
+            st.caption(
+                "Regret, near-optimal success, model agreement and "
+                "random-seed robustness evaluate the recommendation."
+            )
+
+    with e4:
+        with st.container(border=True):
+            st.markdown("#### ④ Hardware evidence")
+            st.caption(
+                "Selected strategic points are evaluated with NeuroSim "
+                "for circuit/system-level trade-offs."
+            )
+
+
+    st.divider()
+
+
+    # ========================================================
+    # CLAIM MATRIX
+    # ========================================================
+
+    st.markdown("### Scientific claim boundary")
+
+    yes_col, no_col = st.columns(2)
+
+    with yes_col:
+        st.success(
+            "SUPPORTED BY THE CURRENT STUDY"
+        )
+
+        st.markdown(
+            """
+            - study-blocked zero-shot recommendation on the current dataset
+            - near-optimal decision performance for RF and Extra Trees
+            - robustness across the tested five seeds
+            - cross-model comparison
+            - 32-point strategic NeuroSim hardware evidence
+            - multi-objective Pareto trade-offs
+            """
+        )
+
+    with no_col:
+        st.error(
+            "NOT ESTABLISHED BY THE CURRENT STUDY"
+        )
+
+        st.markdown(
+            """
+            - fabricated-chip validation
+            - measured chip energy, area or latency
+            - universal generalization to all memristor technologies
+            - direct NeuroSim validation of every ML recommendation
+            - software accuracy as hardware-measured accuracy
+            - replacement of NeuroSim, SPICE or EDA
+            """
+        )
+
+
+    st.divider()
+
+
+    # ========================================================
+    # RESEARCH EVIDENCE STATUS
+    # ========================================================
+
+    st.markdown("### Research evidence status")
+
+    s1, s2, s3 = st.columns(3)
+
+    with s1:
+        with st.container(border=True):
+            st.markdown("#### Cross-device validation")
+            st.success("10 held-out device profiles")
+            st.caption(
+                "The target device is excluded from training and evaluated "
+                "using study-blocked zero-shot recommendation."
+            )
+
+    with s2:
+        with st.container(border=True):
+            st.markdown("#### Robustness evaluation")
+            st.success("4 models • 5 random seeds")
+            st.caption(
+                "The final study compares multiple regressors, random-seed "
+                "stability and cross-model recommendation agreement."
+            )
+
+    with s3:
+        with st.container(border=True):
+            st.markdown("#### Hardware evidence")
+            st.success("32 NeuroSim points • 20 Pareto")
+            st.caption(
+                "Selected strategic configurations are evaluated for "
+                "circuit/system-level energy, latency, area and efficiency trade-offs."
+            )
+
+    st.caption(
+        "Current evidence is computational and literature-grounded. "
+        "NeuroSim values are simulation estimates, not fabricated-chip measurements."
+    )
