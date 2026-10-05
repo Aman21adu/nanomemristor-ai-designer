@@ -1,0 +1,22 @@
+{
+  "stage": 20,
+  "name": "Random-seed stability of leading ML baselines",
+  "seeds": [
+    7,
+    21,
+    42,
+    84,
+    123
+  ],
+  "models": [
+    "RANDOM_FOREST",
+    "EXTRA_TREES",
+    "GRADIENT_BOOSTING"
+  ],
+  "device_profiles": 10,
+  "independent_studies": 8,
+  "families": 5,
+  "rows": 2450,
+  "split_rule": "Study-blocked held-out-device evaluation; every same-study sibling is excluded from training.",
+  "interpretation": "Seed variation measures algorithmic stochastic stability. It does not increase the number of independent experimental devices or studies."
+}

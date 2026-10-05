@@ -9,6 +9,16 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+from final_public_ui import (
+    inject_final_public_style,
+    inject_no_truncation_style,
+    render_home_hero,
+    render_publication_positioning,
+    render_publication_positioning_v2,
+)
+
+from publication_evidence import render_publication_results_v3
+
 
 # ============================================================
 # PAGE
@@ -20,6 +30,9 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+inject_final_public_style()
+inject_no_truncation_style()
 
 
 # ============================================================
@@ -97,6 +110,18 @@ PAGES = [
     "Sources & Limitations",
 ]
 
+
+NAV_LABELS = {
+    "Home": "🏠 Home",
+    "Forward Design": "⚡ Quick Device Check",
+    "Custom Device": "🧪 Custom Device",
+    "Reverse Design": "↩ Reverse Design",
+    "Research Targets": "🔬 Research Targets",
+    "Why Nano?": "🧬 Why Nano?",
+    "Research Evidence": "📊 Research & Hardware Evidence",
+    "Sources & Limitations": "📚 Publication & Sources",
+}
+
 MODEL_FEATURE_LABELS = [
     "ON/OFF ratio",
     "State-count availability",
@@ -110,6 +135,34 @@ MODEL_FEATURE_LABELS = [
     "Conductance behavior",
     "Weight-mapping strategy",
 ]
+
+
+
+PUBLIC_DEVICE_NAMES = {
+    "HfOx_01": "HfOx device 1",
+    "HfOx_02": "HfOx device 2",
+    "HfZrOx_01": "HfZrOx device",
+    "TaOx_01": "TaOx device",
+    "TiOx_02_Au": "TiOx-Au device",
+    "TiOx_02_Ni": "TiOx-Ni device",
+    "TiOx_02_Pt": "TiOx-Pt device",
+    "TiOx_03": "TiOx device 3",
+    "TiOx_04": "TiOx device 4",
+    "ZnO_01": "ZnO device",
+}
+
+
+def public_device_name(device_id):
+    """Convert internal research IDs to publication-facing names."""
+    if device_id is None:
+        return "Not available"
+
+    value = str(device_id)
+
+    return PUBLIC_DEVICE_NAMES.get(
+        value,
+        value.replace("_", " "),
+    )
 
 
 # ============================================================
@@ -624,8 +677,7 @@ def public_info(device_id: str):
 
 
 def public_device_label(device_id: str):
-    info = public_info(device_id)
-    return f"{info['symbol']} — {info['short_name']}"
+    return public_device_name(device_id)
 
 
 def public_mode_name(mode):
@@ -1687,10 +1739,10 @@ if st.session_state.show_welcome:
             <div class="card-kicker">Quick Start</div>
             <div class="welcome-title">NanoMemristor AI Designer</div>
             <div class="welcome-text">
-                Connect literature-derived memristor behavior to simulated
-                AI-accelerator design.<br><br>
-                Choose a workflow below, or continue to the main dashboard
-                and explore at your own pace.
+                Screen memristor-to-accelerator design choices using
+                evidence-aware cross-device AI.<br><br>
+                <strong>Screen → prioritize → validate.</strong><br><br>
+                Choose a workflow below or enter the main dashboard.
             </div>
         </div>
         """
@@ -1710,7 +1762,7 @@ if st.session_state.show_welcome:
     with c1:
         render_workflow_card(
             "Workflow 1",
-            "Known Memristor → Accelerator",
+            "Quick Device Check",
             (
                 "Choose a literature-derived memristor and receive a "
                 "support-gated accelerator recommendation."
@@ -1813,6 +1865,7 @@ if st.session_state.show_welcome:
 # ============================================================
 
 st.sidebar.markdown("## ⚡ NanoMemristor AI Designer")
+st.sidebar.caption("Research prototype • Screen → prioritize → validate")
 
 if st.sidebar.button(
     "🏠 Quick Start / How to Use",
@@ -1872,7 +1925,7 @@ for nav_page in PAGES:
     is_active = nav_page == st.session_state.current_page
 
     if st.sidebar.button(
-        nav_page,
+        NAV_LABELS.get(nav_page, nav_page),
         key=f"nav_{nav_page}",
         type="primary" if is_active else "secondary",
         use_container_width=True,
@@ -2043,8 +2096,16 @@ render_html(
 # ============================================================
 
 if page == "Home":
+    render_home_hero(
+        device_count=device_count,
+        study_count=study_count,
+        family_count=family_count,
+        total_simulation_rows=total_simulation_rows,
+    )
+
+    st.divider()
     section_header(
-        "What is this project?",
+        "How the research works",
         (
             "The tool links memristor device behavior reported in the literature "
             "to a simulated AI accelerator. It then asks whether knowledge learned "
@@ -2162,17 +2223,62 @@ if page == "Home":
 
 elif page == "Forward Design":
     section_header(
-        "Forward Design",
+        "Quick Device Check",
         (
-            "Start with a memristor device and ask: which accelerator "
-            "configuration should I use?"
+            "Choose a literature-grounded memristor profile and see which "
+            "accelerator configuration the final support-aware workflow "
+            "would prioritize first."
         ),
         (
-            "The final policy combines a study-aware Random-Forest prediction, "
-            "a historical validation penalty and a descriptor-support gate."
+            "The public recommendation uses the final guarded policy. "
+            "The Research & Hardware Evidence page compares four ML models, "
+            "five random seeds and separate NeuroSim hardware evidence."
         ),
         level=2,
     )
+
+    # QUICK DEVICE CHECK GUIDE V2
+    st.markdown("### How this check works")
+
+    q1, q2, q3, q4 = st.columns(4)
+
+    with q1:
+        with st.container(border=True):
+            st.markdown("#### ① Read device")
+            st.caption(
+                "Use the selected literature-derived memristor profile "
+                "and its accelerator-relevant electrical descriptors."
+            )
+
+    with q2:
+        with st.container(border=True):
+            st.markdown("#### ② Check support")
+            st.caption(
+                "Check whether the target is sufficiently represented "
+                "by same-mode training evidence."
+            )
+
+    with q3:
+        with st.container(border=True):
+            st.markdown("#### ③ Recommend")
+            st.caption(
+                "Prioritize a crossbar size, weight precision and ADC "
+                "precision using the final guarded policy."
+            )
+
+    with q4:
+        with st.container(border=True):
+            st.markdown("#### ④ Validate")
+            st.caption(
+                "Compare the recommendation with the held-out exhaustive "
+                "simulation results and calculate regret."
+            )
+
+    st.caption(
+        "Device evidence → support check → AI recommendation → exhaustive evaluation"
+    )
+
+    st.divider()
 
     st.markdown(
         f"## {selected_material['symbol']} — {selected_material['name']}"
@@ -2180,14 +2286,20 @@ elif page == "Forward Design":
     st.write(selected_material["description"])
 
     section_header(
-        "1. Device behavior",
+        "1. Device evidence",
         (
-            "These descriptors connect the nanodevice to the accelerator model."
+            "These are the accelerator-relevant properties of the selected "
+            "literature-derived memristor profile."
         ),
         (
-            "ON/OFF ratio, conductance mode and state capability enter the "
-            "cross-device model together with accelerator configuration features."
+            "ON/OFF ratio, conductance behavior and state capability are "
+            "device descriptors used together with accelerator configuration features."
         ),
+    )
+
+    st.info(
+        "Read this section as the input to the recommendation. "
+        "You do not need to change these values in Quick Device Check."
     )
 
     c1, c2, c3, c4 = st.columns(4)
@@ -2304,17 +2416,21 @@ elif page == "Forward Design":
     st.divider()
 
     section_header(
-        "2. Support-gated AI recommendation",
+        "2. Suggested accelerator configuration",
         (
-            "The system first checks whether aggressive cost optimization is "
-            "supported. If not, it chooses the highest predicted-accuracy region "
-            "instead of trusting a cheap but risky configuration."
+            "The system checks evidence support before deciding whether "
+            "cost-aware optimization is appropriate."
         ),
         (
-            "The gate requires at least two same-conductance-mode training profiles "
-            "and the held-out device's log10(ON/OFF) to lie inside that training "
-            "envelope. This is a transparent safeguard, not a calibrated OOD probability."
+            "If support is insufficient, the workflow becomes conservative "
+            "and prioritizes predicted accuracy instead. The support check is "
+            "a transparent rule, not a calibrated OOD probability."
         ),
+    )
+
+    st.caption(
+        "Suggested design = screening recommendation for what to validate next, "
+        "not a fabricated-hardware result."
     )
 
     policy_label = format_policy(rec_policy)
@@ -2469,12 +2585,18 @@ elif page == "Forward Design":
     st.divider()
 
     section_header(
-        "3. Exhaustive validation",
+        "3. Validation against all 245 candidates",
         (
-            "Because this is a research evaluation, the held-out device already has "
-            "245 simulated configurations. They are revealed only after the AI "
-            "recommendation so we can measure regret."
+            "For the held-out research devices, all 245 candidate configurations "
+            "are already available. They are used only after recommendation to "
+            "measure how close the selected design is to the exhaustive best."
         ),
+    )
+
+    st.info(
+        "How to read this section: predicted accuracy is the ML estimate; "
+        "recommended actual is the simulator result for the selected configuration; "
+        "exhaustive raw best is the best accuracy among all 245 candidates."
     )
 
     v1, v2, v3, v4 = st.columns(4)
@@ -2648,15 +2770,55 @@ elif page == "Custom Device":
     section_header(
         "Custom Device",
         (
-            "Enter a few device descriptors and ask what accelerator configuration "
-            "the current surrogate would recommend."
+            "Use this workflow when your device is not one of the saved "
+            "literature profiles but you know its accelerator-relevant "
+            "electrical descriptors."
         ),
         (
-            "This is descriptor-level prediction. It does not create missing "
-            "literature evidence or validate a fabricated device."
+            "The result is a suggested accelerator starting configuration. "
+            "It does not prove material fabricability or physical device performance."
         ),
         level=2,
     )
+
+    # CUSTOM DEVICE GUIDE V2
+    st.markdown("### From your device descriptors to a starting design")
+
+    cd1, cd2, cd3, cd4 = st.columns(4)
+
+    with cd1:
+        with st.container(border=True):
+            st.markdown("#### ① Enter")
+            st.caption(
+                "Provide ON/OFF ratio, conductance behavior and state "
+                "capability when known."
+            )
+
+    with cd2:
+        with st.container(border=True):
+            st.markdown("#### ② Compare")
+            st.caption(
+                "Locate the custom descriptor relative to the current "
+                "literature-derived training evidence."
+            )
+
+    with cd3:
+        with st.container(border=True):
+            st.markdown("#### ③ Support check")
+            st.caption(
+                "Determine whether cost-aware selection is supported "
+                "or whether the safer accuracy-first fallback is needed."
+            )
+
+    with cd4:
+        with st.container(border=True):
+            st.markdown("#### ④ Suggest")
+            st.caption(
+                "Return an accelerator configuration to use as a "
+                "starting point for deeper validation."
+            )
+
+    st.divider()
 
     render_html(
         """
@@ -2671,6 +2833,14 @@ elif page == "Custom Device":
     if ml_df.empty:
         st.error("ml_dataset.csv is missing, so Custom Device cannot run.")
     else:
+        st.markdown("### 1. Describe your device")
+
+        st.caption(
+            "Use values from measurement or literature where possible. "
+            "If a fixed physical-state count is not known, leave it unknown "
+            "rather than inventing a value."
+        )
+
         col1, col2, col3 = st.columns(3)
 
         with col1:
@@ -2741,11 +2911,13 @@ elif page == "Custom Device":
                     custom_states = 0
 
         if st.button(
-            "Predict Custom Device",
+            "Find Suggested Configuration",
             type="primary",
             use_container_width=True,
         ):
-            with st.spinner("Training the surrogate and evaluating 245 candidate designs..."):
+            with st.spinner(
+                "Evaluating the custom descriptor across the candidate design space..."
+            ):
                 try:
                     from stage13_custom_device import (
                         ALL_FEATURES as CUSTOM_FEATURES,
@@ -2923,10 +3095,14 @@ elif page == "Custom Device":
             nearest = result["nearest"]
 
             section_header(
-                "Recommendation",
+                "2. Suggested starting configuration",
                 (
-                    "The same support-gated idea used in the held-out validation "
-                    "is applied to this custom descriptor."
+                    "The custom device is evaluated with the same support-aware "
+                    "selection principle used in the research workflow."
+                ),
+                (
+                    "Treat this as a candidate for further simulation or EDA-level "
+                    "validation, not as a physically validated optimum."
                 ),
             )
 
@@ -2940,6 +3116,17 @@ elif page == "Custom Device":
                 </div>
                 """
             )
+
+            if result["policy"] == "VALIDATION_AWARE_COST":
+                st.success(
+                    "SUPPORTED REGION — the custom descriptor has sufficient "
+                    "same-mode evidence for validation-aware cost selection."
+                )
+            else:
+                st.warning(
+                    "EXTRAPOLATION / LIMITED SUPPORT — the workflow has switched "
+                    "to the conservative accuracy-first fallback."
+                )
 
             c1, c2, c3, c4 = st.columns(4)
             c1.metric(
@@ -2955,13 +3142,13 @@ elif page == "Custom Device":
                 f"{int(chosen['adc_bits'])}-bit",
             )
             c4.metric(
-                "Predicted accuracy",
+                "ML-predicted accuracy",
                 f"{float(chosen['predicted_accuracy']):.2f}%",
             )
 
             d1, d2, d3 = st.columns(3)
             d1.metric(
-                "Validation-adjusted score",
+                "Support-adjusted score",
                 f"{float(chosen['validation_adjusted_score']):.2f}",
             )
             d2.metric(
@@ -2974,8 +3161,15 @@ elif page == "Custom Device":
             )
 
             st.caption(
-                "Descriptor distance is a relative heuristic only. It is not an "
-                "OOD probability and not proof that the custom material is physically valid."
+                "Nearest known device = most similar profile under the current "
+                "descriptor representation. Descriptor distance is a heuristic; "
+                "it is not a probability, calibrated confidence score, or proof "
+                "that the custom material is physically valid."
+            )
+
+            st.info(
+                "Next step: use this result to prioritize detailed simulation, "
+                "device-aware circuit analysis or experimental investigation."
             )
 
             if st.session_state.app_mode == "Researcher":
@@ -3009,35 +3203,79 @@ elif page == "Reverse Design":
     section_header(
         "Reverse Design",
         (
-            "Instead of starting from a memristor, start from the accelerator "
-            "performance you want and search backward for useful device properties."
+            "Start from the accelerator behavior you want and search backward "
+            "for device properties that could support it."
         ),
         (
-            "The reverse search operates over descriptor scenarios and the trained "
-            "surrogate. It returns device-property requirements, not a newly "
-            "discovered chemical material."
+            "The output is a device-property target — not a newly discovered "
+            "material, fabrication recipe or experimentally validated device."
         ),
         level=2,
     )
 
-    render_html(
-        """
-        <div class="step-row">
-            <div class="step-pill"><b>Desired performance</b>Accuracy + cost constraint</div>
-            <div class="step-pill"><b>Search backward</b>Surrogate descriptor space</div>
-            <div class="step-pill"><b>Device target</b>ON/OFF + behavior + states</div>
-            <div class="step-pill"><b>Literature anchor</b>Nearest known profile</div>
-        </div>
-        """
+    st.info(
+        "Forward Design asks: “I have this memristor — what accelerator should "
+        "I try?”  Reverse Design asks: “I want this accelerator behavior — "
+        "what memristor properties should I investigate?”"
     )
+
+    st.markdown("### How reverse design works")
+
+    rv1, rv2, rv3, rv4 = st.columns(4)
+
+    with rv1:
+        with st.container(border=True):
+            st.markdown("#### ① Define")
+            st.caption(
+                "Choose the minimum performance and relative design-cost "
+                "constraint you want."
+            )
+
+    with rv2:
+        with st.container(border=True):
+            st.markdown("#### ② Search backward")
+            st.caption(
+                "Search modeled device-descriptor scenarios that could "
+                "support those accelerator requirements."
+            )
+
+    with rv3:
+        with st.container(border=True):
+            st.markdown("#### ③ Device target")
+            st.caption(
+                "Return ON/OFF ratio, conductance behavior and state "
+                "capability to investigate experimentally."
+            )
+
+    with rv4:
+        with st.container(border=True):
+            st.markdown("#### ④ Literature anchor")
+            st.caption(
+                "Compare the target with the nearest characterized "
+                "device profile in the current evidence base."
+            )
+
+    st.divider()
 
     reverse_df = DATA["reverse_candidates"]
 
     if reverse_df.empty:
         st.error(
-            "reverse_design_candidates.csv is missing. Run Stage 14 first."
+            "Reverse-design evidence is currently unavailable."
         )
+
+        if st.session_state.app_mode == "Researcher":
+            st.caption(
+                "Technical detail: reverse_design_candidates.csv could not be loaded."
+            )
     else:
+        st.markdown("### 1. Define the desired accelerator region")
+
+        st.caption(
+            "These filters narrow the existing reverse-design search. "
+            "The cost value is only a relative comparison proxy."
+        )
+
         f1, f2, f3 = st.columns(3)
 
         with f1:
@@ -3145,12 +3383,70 @@ elif page == "Reverse Design":
                 f"{float(req['descriptor_distance_to_nearest_known'].min()):.3f}",
             )
 
+
+            st.markdown("### 2. Best current device-property target")
+
+            best_target = req.iloc[0]
+
+            bt1, bt2, bt3, bt4 = st.columns(4)
+
+            bt1.metric(
+                "Target ON/OFF",
+                f"{float(best_target['candidate_on_off_ratio']):.3g}",
+            )
+
+            bt2.metric(
+                "Conductance behavior",
+                human_mode(best_target["candidate_mode"]),
+            )
+
+            bt3.metric(
+                "Target states",
+                display_target_states(
+                    best_target["candidate_mode"],
+                    best_target["candidate_state_count"],
+                ),
+            )
+
+            bt4.metric(
+                "Nearest known device",
+                str(best_target["nearest_known_device"]),
+            )
+
+            ba1, ba2, ba3 = st.columns(3)
+
+            ba1.metric(
+                "Crossbar",
+                f"{int(best_target['crossbar_size'])} × "
+                f"{int(best_target['crossbar_size'])}",
+            )
+
+            ba2.metric(
+                "Weight / ADC",
+                f"{int(best_target['requested_weight_bits'])}-bit / "
+                f"{int(best_target['adc_bits'])}-bit",
+            )
+
+            ba3.metric(
+                "Support-adjusted score",
+                f"{float(best_target['validation_adjusted_score']):.3f}",
+            )
+
+            st.caption(
+                "Interpret this as an experimentally interesting device-property "
+                "target associated with a promising modeled accelerator region — "
+                "not as a guaranteed material recipe."
+            )
+
             section_header(
-                "Top reverse-design requirements",
+                "3. Alternative device-property targets",
                 (
-                    "Each row says: if a device approximately had these properties, "
-                    "the surrogate predicts that the shown accelerator configuration "
-                    "could satisfy your target."
+                    "These are additional descriptor combinations associated with "
+                    "accelerator configurations that satisfy the current filters."
+                ),
+                (
+                    "Several different device-property targets may lead to similarly "
+                    "useful modeled accelerator behavior."
                 ),
             )
 
@@ -3187,6 +3483,12 @@ elif page == "Reverse Design":
                 }
             )
 
+            if "Nearest Literature Device" in display.columns:
+                display["Nearest Literature Device"] = (
+                    display["Nearest Literature Device"]
+                    .map(public_device_name)
+                )
+
             cols = [
                 "Target ON/OFF",
                 "Conductance Mode",
@@ -3201,24 +3503,49 @@ elif page == "Reverse Design":
                 "Match",
             ]
 
-            st.dataframe(
-                display[cols].round(3),
-                use_container_width=True,
-                hide_index=True,
-            )
+            if st.session_state.app_mode == "Researcher":
+                st.dataframe(
+                    display[cols].round(3),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+            else:
+                public_cols = [
+                    c for c in [
+                        "Target ON/OFF",
+                        "Conductance Mode",
+                        "Target States",
+                        "Crossbar",
+                        "Weight Bits",
+                        "ADC Bits",
+                        "Adjusted Score",
+                        "Nearest Literature Device",
+                        "Match",
+                    ]
+                    if c in display.columns
+                ]
+
+                st.dataframe(
+                    display[public_cols].head(5).round(3),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+                st.caption(
+                    "Showing the five strongest public-facing targets. "
+                    "Researcher mode retains the larger technical comparison."
+                )
 
             section_header(
-                "Experimental literature match",
+                "4. Is anything similar already reported?",
                 (
-                    "For each reverse-designed device-property target, "
-                    "the tool checks which experimental profile in the current "
-                    "literature dataset is closest."
+                    "Each device-property target is compared with the closest "
+                    "experimental profile represented in the current literature dataset."
                 ),
                 (
-                    "This is Stage 15 descriptor matching. "
-                    "A close descriptor match supports plausibility of the "
-                    "modeled device properties only; it does not mean the paper "
-                    "demonstrated the proposed accelerator configuration."
+                    "A close descriptor match supports descriptor-level plausibility "
+                    "only. It does not mean that the source paper demonstrated the "
+                    "proposed accelerator configuration."
                 ),
             )
 
@@ -3327,6 +3654,15 @@ elif page == "Reverse Design":
 
                 match_df = pd.DataFrame(match_rows)
 
+                if (
+                    not match_df.empty
+                    and "Matched Device" in match_df.columns
+                ):
+                    match_df["Matched Device"] = (
+                        match_df["Matched Device"]
+                        .map(public_device_name)
+                    )
+
                 if not match_df.empty:
                     match_df["Target Mode"] = match_df[
                         "Target Mode"
@@ -3350,11 +3686,31 @@ elif page == "Reverse Design":
                         }
                     )
 
-                    st.dataframe(
-                        match_df.round(3),
-                        use_container_width=True,
-                        hide_index=True,
-                    )
+                    if st.session_state.app_mode == "Researcher":
+                        st.dataframe(
+                            match_df.round(3),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    else:
+                        public_match_cols = [
+                            c for c in [
+                                "Target ON/OFF",
+                                "Target Mode",
+                                "Target States",
+                                "Matched Device",
+                                "Family",
+                                "Match Class",
+                                "Distance",
+                            ]
+                            if c in match_df.columns
+                        ]
+
+                        st.dataframe(
+                            match_df[public_match_cols].head(5).round(3),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
 
                     exact_or_very_close = int(
                         match_df["Match Class"].isin(
@@ -3429,25 +3785,72 @@ elif page == "Research Targets":
     section_header(
         "Future Experimental Research Targets",
         (
-            "Explore device-property regions identified by the completed "
-            "Stage-16 pipeline as useful accelerator-oriented research gaps."
+            "Find device-property regions that appear useful for accelerator "
+            "design but are weakly represented in the current literature evidence."
         ),
         (
-            "These targets are generated from Stage-14 reverse-design "
-            "requirements matched against Stage-15 experimental profiles. "
-            "The saved Stage-16 table is the authoritative source shown here."
+            "The tool combines reverse-designed device requirements with "
+            "distance from characterized literature profiles to prioritize "
+            "possible experimental research directions."
         ),
         level=2,
     )
+
+    st.info(
+        "This page proposes device-property regions worth investigating. "
+        "It does not predict a new chemical composition, electrode stack "
+        "or fabrication process."
+    )
+
+    st.markdown("### How a research target is created")
+
+    rt1, rt2, rt3 = st.columns(3)
+
+    with rt1:
+        with st.container(border=True):
+            st.markdown("#### ① Useful for the accelerator")
+            st.caption(
+                "Keep device-property targets associated with acceptable "
+                "modeled accelerator performance."
+            )
+
+    with rt2:
+        with st.container(border=True):
+            st.markdown("#### ② Compare with literature")
+            st.caption(
+                "Measure how closely each target resembles currently "
+                "characterized device profiles."
+            )
+
+    with rt3:
+        with st.container(border=True):
+            st.markdown("#### ③ Prioritize the gap")
+            st.caption(
+                "Rank closer, more plausible gaps ahead of highly "
+                "extrapolative hypotheses."
+            )
+
+    st.divider()
 
     future_targets = DATA["future_targets"].copy()
 
     if future_targets.empty:
         st.error(
-            "future_research_targets.csv is missing. Run Stage 16 before "
-            "using this page."
+            "Research-target evidence is currently unavailable."
         )
+
+        if st.session_state.app_mode == "Researcher":
+            st.caption(
+                "Technical detail: future_research_targets.csv could not be loaded."
+            )
     else:
+        st.markdown("### 1. Filter candidate research directions")
+
+        st.caption(
+            "Adjust the modeled performance threshold or relative design-cost "
+            "limit to narrow the saved research-target set."
+        )
+
         default_min_score = 95.5
         default_max_cost = 5000.0
 
@@ -3535,12 +3938,49 @@ elif page == "Research Targets":
             x3.metric("Tier B", b)
             x4.metric("Tier C", c)
 
-            st.markdown(
-                """
-                **Tier A** = closest genuine research gap and best near-term target.  
-                **Tier B** = moderate extrapolation; stronger validation required.  
-                **Tier C** = high extrapolation; hypothesis-generating only.
-                """
+            st.markdown("### 2. Research-gap priority")
+
+            ta, tb, tc = st.columns(3)
+
+            with ta:
+                with st.container(border=True):
+                    st.markdown("#### Tier A — Near-term")
+                    st.metric("Targets", a)
+                    st.caption(
+                        "Closest genuine gaps. Best candidates for "
+                        "near-term experimental investigation."
+                    )
+
+            with tb:
+                with st.container(border=True):
+                    st.markdown("#### Tier B — Moderate gap")
+                    st.metric("Targets", b)
+                    st.caption(
+                        "More extrapolative. Additional validation is "
+                        "needed before committing major experimental effort."
+                    )
+
+            with tc:
+                with st.container(border=True):
+                    st.markdown("#### Tier C — Exploratory")
+                    st.metric("Targets", c)
+                    st.caption(
+                        "High extrapolation. Treat as hypothesis-generating "
+                        "directions rather than near-term recommendations."
+                    )
+
+            tier_chart = pd.DataFrame(
+                {
+                    "Tier": ["Tier A", "Tier B", "Tier C"],
+                    "Targets": [a, b, c],
+                }
+            )
+
+            st.bar_chart(
+                tier_chart,
+                x="Tier",
+                y="Targets",
+                use_container_width=True,
             )
 
             if (
@@ -3548,13 +3988,18 @@ elif page == "Research Targets":
                 and abs(float(future_cost) - default_max_cost) < 1e-9
             ):
                 st.caption(
-                    "Default view = the saved Stage-16 result set. "
-                    "This should reproduce the official Stage-16 counts."
+                    "Default view shows the frozen final research-target set."
                 )
+
+                if st.session_state.app_mode == "Researcher":
+                    st.caption(
+                        "Research provenance: this corresponds to the saved "
+                        "Stage-16 result set."
+                    )
             else:
                 st.caption(
-                    "You are viewing a filtered subset of the saved Stage-16 "
-                    "research targets."
+                    "You are viewing a filtered subset of the frozen "
+                    "research-target evidence."
                 )
 
             display = future.head(15).copy()
@@ -3602,6 +4047,12 @@ elif page == "Research Targets":
                 }
             )
 
+            if "Nearest Literature Device" in display.columns:
+                display["Nearest Literature Device"] = (
+                    display["Nearest Literature Device"]
+                    .map(public_device_name)
+                )
+
             cols = [
                 c
                 for c in [
@@ -3622,22 +4073,45 @@ elif page == "Research Targets":
                 if c in display.columns
             ]
 
-            st.dataframe(
-                display[cols].round(3),
-                use_container_width=True,
-                hide_index=True,
-            )
+            st.markdown("### 3. Highest-priority targets")
 
-            render_html(
-                """
-                <div class="callout">
-                    <strong>Nanotechnology meaning:</strong> use the target ON/OFF
-                    ratio, conductance behavior and state-count requirement as
-                    experimentally testable device specifications. Material/stack
-                    engineering can then investigate how to realize those
-                    specifications.
-                </div>
-                """
+            if st.session_state.app_mode == "Researcher":
+                st.dataframe(
+                    display[cols].round(3),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+            else:
+                public_cols = [
+                    c for c in [
+                        "Rank",
+                        "Research Tier",
+                        "Target ON/OFF",
+                        "Conductance Mode",
+                        "Target States",
+                        "Nearest Literature Device",
+                        "Matched Family",
+                        "Gap Distance",
+                    ]
+                    if c in display.columns
+                ]
+
+                st.dataframe(
+                    display[public_cols].head(5).round(3),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+                st.caption(
+                    "Public view shows the five highest-priority research targets. "
+                    "Researcher mode retains the larger technical table."
+                )
+
+            st.success(
+                "Nanotechnology interpretation: the target ON/OFF ratio, "
+                "conductance behavior and state capability become experimentally "
+                "testable device objectives. Materials and stack engineering can "
+                "then investigate how those electrical properties might be realized."
             )
 
             render_html(
@@ -3698,11 +4172,20 @@ elif page == "Why Nano?":
     section_header(
         "Why is this a nanotechnology project?",
         (
-            "The project is not simply ranking material names. "
-            "Nanoscale device behavior constrains how neural-network weights "
-            "can be represented in a memristor accelerator."
+            "The project begins with physical memristor behavior, not with "
+            "a generic AI model. Device-scale electrical properties constrain "
+            "how neural-network weights can be represented in hardware."
+        ),
+        (
+            "The AI layer learns relationships between those device descriptors "
+            "and accelerator design choices; it does not replace device physics."
         ),
         level=2,
+    )
+
+    st.info(
+        "The central co-design question is: when the physical memristor changes, "
+        "how should the accelerator architecture change with it?"
     )
 
     st.markdown(
@@ -3739,15 +4222,82 @@ elif page == "Why Nano?":
             "Physical memristor-cell requirement of the selected mapping.",
         )
 
-    render_html(
-        """
-        <div class="step-row">
-            <div class="step-pill"><b>Nanomaterial / stack</b>Determines electrical switching behavior</div>
-            <div class="step-pill"><b>Device descriptors</b>ON/OFF, state capability, conductance mode</div>
-            <div class="step-pill"><b>Weight mapping</b>How neural weights use physical cells</div>
-            <div class="step-pill"><b>Accelerator</b>Accuracy / precision / cost trade-off</div>
-        </div>
-        """
+    st.markdown("### From nanodevice behavior to accelerator design")
+
+    n1, n2, n3, n4 = st.columns(4)
+
+    with n1:
+        with st.container(border=True):
+            st.markdown("#### ① Nanomaterial / stack")
+            st.caption(
+                "Material system, electrodes and device structure influence "
+                "electrical switching behavior."
+            )
+
+    with n2:
+        with st.container(border=True):
+            st.markdown("#### ② Device descriptors")
+            st.caption(
+                "ON/OFF ratio, conductance behavior and available state "
+                "capability summarize the represented device behavior."
+            )
+
+    with n3:
+        with st.container(border=True):
+            st.markdown("#### ③ Weight mapping")
+            st.caption(
+                "Those properties constrain how neural-network weights "
+                "can be represented using physical memristor cells."
+            )
+
+    with n4:
+        with st.container(border=True):
+            st.markdown("#### ④ Accelerator")
+            st.caption(
+                "Crossbar size, weight precision and ADC precision then "
+                "produce different accuracy and hardware trade-offs."
+            )
+
+    st.caption(
+        "Nanodevice → electrical behavior → weight representation → accelerator design"
+    )
+
+    st.divider()
+
+    st.markdown("### What each discipline contributes")
+
+    nano_col, ai_col = st.columns(2)
+
+    with nano_col:
+        with st.container(border=True):
+            st.markdown("#### Nanotechnology / device side")
+            st.markdown(
+                """
+                - switching and conductance behavior
+                - ON/OFF dynamic range
+                - available conductance states
+                - physical cells required for weight representation
+                - future material/stack engineering questions
+                """
+            )
+
+    with ai_col:
+        with st.container(border=True):
+            st.markdown("#### AI / accelerator side")
+            st.markdown(
+                """
+                - learn cross-device relationships
+                - predict useful design regions
+                - choose crossbar / precision combinations
+                - check evidence support
+                - prioritize candidates for deeper validation
+                """
+            )
+
+    st.caption(
+        "The novelty is in connecting these domains under cross-device "
+        "held-out recommendation and evidence-aware validation — not in "
+        "claiming that the ML model itself is a new algorithm."
     )
 
     st.divider()
@@ -3760,27 +4310,49 @@ elif page == "Why Nano?":
         ),
     )
 
-    st.markdown(
-        """
-        **Currently represented**
-        - ON/OFF ratio
-        - conductance behavior
-        - fixed state count when available
-        - mapping strategy
-        - weight precision
-        - ADC precision
-        - crossbar size
+    modeled_col, boundary_col = st.columns(2)
 
-        **Not yet directly calibrated to measured device physics**
-        - cycle-to-cycle and device-to-device variability distributions
-        - retention drift
-        - endurance degradation
-        - line resistance and IR drop
-        - switching kinetics
-        - temperature dependence
-        - measured energy, area, latency and peripheral power
-        """
-    )
+    with modeled_col:
+        st.markdown("#### Represented in the co-design model")
+        st.markdown(
+            """
+            - ON/OFF ratio
+            - conductance behavior
+            - fixed state count when available
+            - weight-mapping strategy
+            - weight precision
+            - ADC precision
+            - crossbar size
+            """
+        )
+
+        st.info(
+            "A separate final hardware-evidence layer also uses NeuroSim "
+            "to estimate circuit/system metrics for selected strategic "
+            "configurations. Those results are shown on the Research & "
+            "Hardware Evidence page."
+        )
+
+    with boundary_col:
+        st.markdown("#### Not directly calibrated to measured device physics")
+        st.markdown(
+            """
+            - cycle-to-cycle variability distributions
+            - device-to-device variability distributions
+            - retention drift
+            - endurance degradation
+            - device-specific line-resistance / IR-drop calibration
+            - switching kinetics
+            - temperature-dependent behavior
+            - fabricated-chip measurements
+            """
+        )
+
+        st.warning(
+            "NeuroSim hardware values are simulation estimates. They should "
+            "not be described as measured energy, latency, area or power from "
+            "a fabricated accelerator."
+        )
 
     if st.session_state.app_mode == "Researcher":
         render_html(
@@ -3801,16 +4373,37 @@ elif page == "Why Nano?":
 
 elif page == "Research Evidence":
     section_header(
-        "Research Evidence",
+        "Research & Hardware Evidence",
         (
-            "This page shows how well the recommendation has been tested and "
-            "where the current evidence is still weak."
+            "Final multi-model recommendation results, robustness analysis "
+            "and circuit-level NeuroSim evidence."
         ),
         (
-            "Study-blocked, leave-one-study-out and leave-one-family-out validation "
-            "are separated from uncertainty/OOD diagnostics and proxy analyses."
+            "Frozen publication evidence is shown first. Extended exploratory "
+            "diagnostics remain available in Researcher mode."
         ),
         level=2,
+    )
+
+    render_publication_results_v3(
+        mode=st.session_state.app_mode
+    )
+
+    if st.session_state.app_mode != "Researcher":
+        st.stop()
+
+    st.divider()
+
+    section_header(
+        "Extended research diagnostics",
+        (
+            "Additional validation, provenance, sensitivity, OOD and proxy "
+            "analyses from the research-development pipeline."
+        ),
+        (
+            "These exploratory diagnostics are kept separate from the frozen "
+            "publication-level results above."
+        ),
     )
 
     if st.session_state.app_mode == "Researcher":
@@ -4706,13 +5299,21 @@ elif page == "Research Evidence":
 
 elif page == "Sources & Limitations":
     section_header(
-        "Sources & Scientific Transparency",
+        "Publication, Sources & Scientific Transparency",
         (
-            "See where the selected device data came from and which parts are "
-            "reported, derived, assumed or missing."
+            "Review the research contribution, literature provenance, "
+            "evidence boundaries and limitations behind the public prototype."
+        ),
+        (
+            "Reported, derived, assumed and missing information remain "
+            "explicitly separated."
         ),
         level=2,
     )
+
+    render_publication_positioning_v2()
+
+    st.divider()
 
     t1, t2, t3 = st.columns(3)
     t1.metric("Literature profiles", literature_device_count)
@@ -4727,7 +5328,11 @@ elif page == "Sources & Limitations":
     )
 
     st.markdown(
-        f"### {selected_material['symbol']} — {selected_material['short_name']}"
+        f"### {public_device_name(selected_device)}"
+    )
+
+    st.caption(
+        "Selected literature-derived device profile and its source provenance."
     )
 
     if profile is not None:
@@ -4744,8 +5349,23 @@ elif page == "Sources & Limitations":
             if c in profile.index
         ]
 
+        source_names = {
+            "source_title": "Publication title",
+            "doi": "DOI",
+            "year": "Publication year",
+            "device_stack": "Device stack",
+            "active_material": "Active material",
+            "parameter_source": "Parameter source",
+        }
+
         source_table = pd.DataFrame(
-            [{"Field": c, "Value": profile[c]} for c in profile_fields]
+            [
+                {
+                    "Field": source_names.get(c, c),
+                    "Value": profile[c],
+                }
+                for c in profile_fields
+            ]
         )
         st.dataframe(
             source_table,
@@ -4753,8 +5373,25 @@ elif page == "Sources & Limitations":
             hide_index=True,
         )
 
-    selected_trace = trace[trace["device_id"] == selected_device].copy()
-    selected_audit = audit[audit["device_id"] == selected_device].copy()
+    selected_trace = trace[
+        trace["device_id"] == selected_device
+    ].copy()
+
+    selected_audit = audit[
+        audit["device_id"] == selected_device
+    ].copy()
+
+    if "device_id" in selected_trace.columns:
+        selected_trace["device_id"] = (
+            selected_trace["device_id"]
+            .map(public_device_name)
+        )
+
+    if "device_id" in selected_audit.columns:
+        selected_audit["device_id"] = (
+            selected_audit["device_id"]
+            .map(public_device_name)
+        )
 
     with st.expander("View literature provenance records", expanded=False):
         st.dataframe(
@@ -4773,7 +5410,7 @@ elif page == "Sources & Limitations":
     st.divider()
 
     section_header(
-        "Current limitations",
+        "Scientific limitations",
         (
             "These limits are part of the scientific interpretation, not hidden "
             "implementation details."
@@ -4784,7 +5421,7 @@ elif page == "Sources & Limitations":
         f"""
         - The current evidence base contains **{device_count} device profiles from
           {study_count} independent primary studies across {family_count} families**.
-        - TiOx_02_Au, TiOx_02_Ni and TiOx_02_Pt come from one shared study.
+        - TiOx-Au device, TiOx-Ni device and TiOx-Pt device come from one shared study.
         - The **{total_simulation_rows:,} simulation rows are not independent
           physical experiments**.
         - The support gate is a transparent extrapolation safeguard, not a

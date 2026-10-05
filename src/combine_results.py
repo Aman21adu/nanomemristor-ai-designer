@@ -29,7 +29,7 @@ OUTPUT_FILE = SWEEP_DIRECTORY / (
 #
 # IMPORTANT:
 #
-# These are seven simulator-ready DEVICE PROFILES.
+# These are ten simulator-ready DEVICE PROFILES.
 #
 # TiOx_02_Au, TiOx_02_Ni, and TiOx_02_Pt are distinct
 # electrode/device variants from the SAME experimental study.
@@ -1407,3 +1407,4 @@ print(
     "Saved to:",
     OUTPUT_FILE
 )
+

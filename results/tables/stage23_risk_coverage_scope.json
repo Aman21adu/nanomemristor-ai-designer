@@ -1,0 +1,11 @@
+{
+  "stage": "23B",
+  "name": "Support-gate risk-coverage sensitivity analysis",
+  "evaluation_basis": "existing leave-one-study-out predictions",
+  "profiles": 10,
+  "independent_studies": 8,
+  "near_optimal_threshold_pp": 0.5,
+  "hardware_metric": "relative_hardware_cost_proxy",
+  "hardware_metric_warning": "The cost proxy is heuristic and must not be described as measured energy, area, latency, power, or monetary cost.",
+  "important_methodological_note": "Alternative gate rules are evaluated only as sensitivity analyses. They must not be selected as a new final gate merely because they perform best on these same held-out test profiles."
+}

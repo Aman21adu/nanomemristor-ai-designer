@@ -1,0 +1,171 @@
+ M .gitignore
+ M README.md
+ M dashboard/app.py
+ M data/device_profiles.csv
+ M data/hfox01_derived_operating_point.csv
+ M data/source_traceability.csv
+ M data/tiox02_derived_operating_points.csv
+ M requirements.txt
+ M results/tables/HfOx_01_config_sweep.csv
+ M results/tables/HfOx_02_config_sweep.csv
+ M results/tables/HfZrOx_01_config_sweep.csv
+ M results/tables/TaOx_01_config_sweep.csv
+ M results/tables/TaOx_02_config_sweep.csv
+ M results/tables/TiOx_02_Au_config_sweep.csv
+ M results/tables/TiOx_02_Ni_config_sweep.csv
+ M results/tables/TiOx_02_Pt_config_sweep.csv
+ M results/tables/TiOx_03_config_sweep.csv
+ M results/tables/TiOx_04_config_sweep.csv
+ M results/tables/ZnO_01_config_sweep.csv
+ M results/tables/ZnO_01_config_sweep_V1.csv
+ M results/tables/ai_evaluation_evidence.csv
+ M results/tables/ai_evaluation_summary.txt
+ M results/tables/all_device_config_results.csv
+ M results/tables/conductance_scale_invariance.csv
+ M results/tables/config_sweep.csv
+ M results/tables/custom_device_Test8State_candidates.csv
+ M results/tables/custom_device_Test8State_summary.csv
+ M results/tables/custom_device_TestGradual_candidates.csv
+ M results/tables/custom_device_TestGradual_summary.csv
+ M results/tables/data_quality_evidence.csv
+ M results/tables/data_quality_summary.txt
+ M results/tables/design_space_evidence.csv
+ M results/tables/design_space_summary.txt
+ M results/tables/device_optimal_configs.csv
+ M results/tables/device_physical_features.csv
+ M results/tables/evidence_coverage_by_device.csv
+ M results/tables/evidence_coverage_summary.csv
+ M results/tables/future_research_target_scope.json
+ M results/tables/future_research_target_summary.csv
+ M results/tables/future_research_targets.csv
+ M results/tables/missing_data_policy.json
+ M results/tables/ml_dataset.csv
+ M results/tables/ml_dataset_manifest.json
+ M results/tables/nano_device_accelerator_evidence.csv
+ M results/tables/nano_device_accelerator_evidence_summary.txt
+ M results/tables/nonideality_proxy_by_device.csv
+ M results/tables/nonideality_proxy_scope.json
+ M results/tables/nonideality_proxy_summary.csv
+ M results/tables/ood_uncertainty_by_device.csv
+ M results/tables/ood_uncertainty_overview.csv
+ M results/tables/pareto_front_by_device.csv
+ M results/tables/pareto_overview.csv
+ M results/tables/pareto_scope.json
+ M results/tables/pareto_summary_by_device.csv
+ M results/tables/quantization_diagnostics.csv
+ M results/tables/ratio_accuracy_sensitivity.csv
+ M results/tables/ratio_accuracy_sensitivity_adc6.csv
+ M results/tables/ratio_sensitivity.csv
+ M results/tables/reverse_design_candidates.csv
+ M results/tables/reverse_design_experiment_match_summary.csv
+ M results/tables/reverse_design_experiment_matches.csv
+ M results/tables/reverse_design_requirements.csv
+ M results/tables/reverse_design_summary.csv
+ M results/tables/scenario_registry.csv
+ M results/tables/sensitivity_by_device.csv
+ M results/tables/sensitivity_factor_levels.csv
+ M results/tables/sensitivity_summary.csv
+ M results/tables/stage17_ablation_by_device.csv
+ M results/tables/stage17_ablation_scope.json
+ M results/tables/stage17_ablation_summary.csv
+ M results/tables/stage18_pareto_by_device.csv
+ M results/tables/stage18_pareto_points.csv
+ M results/tables/stage18_pareto_scope.json
+ M results/tables/stage18_pareto_summary.csv
+ M results/tables/stage19_model_baseline_predictions.csv
+ M results/tables/stage19_model_baselines_by_device.csv
+ M results/tables/stage19_model_baselines_scope.json
+ M results/tables/stage19_model_baselines_summary.csv
+ M results/tables/stage20_seed_stability_by_device.csv
+ M results/tables/stage20_seed_stability_by_seed.csv
+ M results/tables/stage20_seed_stability_scope.json
+ M results/tables/stage20_seed_stability_summary.csv
+ M results/tables/stage21_family_allpass.csv
+ M results/tables/stage21_family_group_summary.csv
+ M results/tables/stage21_study_allpass.csv
+ M results/tables/stage21_study_group_summary.csv
+ M results/tables/stage22_bootstrap_scope.json
+ M results/tables/stage22_study_bootstrap_ci.csv
+ M results/tables/stage23_risk_coverage_by_device.csv
+ M results/tables/stage23_risk_coverage_scope.json
+ M results/tables/stage23_risk_coverage_summary.csv
+ M results/tables/stage23_support_gate_audit.csv
+ M results/tables/stage23_support_gate_scope.json
+ M results/tables/stage24_ppa_device_eligibility.csv
+ M results/tables/state_count_accuracy_sensitivity.csv
+ M results/tables/traceability_audit.csv
+ M results/tables/zero_shot_family_predictions.csv
+ M results/tables/zero_shot_family_summary.csv
+ M results/tables/zero_shot_predictions.csv
+ M results/tables/zero_shot_reliability_penalties.csv
+ M results/tables/zero_shot_study_predictions.csv
+ M results/tables/zero_shot_study_summary.csv
+ M results/tables/zero_shot_summary.csv
+ M results/tables/zero_shot_validation_overview.csv
+ M src/add_hfox01_profile.py
+ M src/add_hfzrox01_profile.py
+ M src/add_tiox02_profiles.py
+ M src/add_tiox04_profile.py
+ M src/audit_traceability.py
+ M src/build_ai_evaluation_summary.py
+ M src/build_data_quality_summary.py
+ M src/build_design_space_summary.py
+ M src/build_ml_dataset.py
+ M src/build_nano_evidence_summary.py
+ M src/build_physical_features.py
+ M src/combine_results.py
+ M src/config_space.py
+ M src/device_model.py
+ M src/integrate_stage17_18_dashboard.py
+ M src/make_final_figures.py
+ M src/memristor_sim.py
+ M src/polish_research_evidence.py
+ M src/select_optimal.py
+ M src/stage10_nonideality_proxy.py
+ M src/stage11_pareto_analysis.py
+ M src/stage13_custom_device.py
+ M src/stage14_reverse_design.py
+ M src/stage15_match_to_experiments.py
+ M src/stage16_future_research_targets.py
+ M src/stage17_device_ablation.py
+ M src/stage18_zero_shot_pareto.py
+ M src/stage19_model_baselines.py
+ M src/stage20_seed_stability.py
+ M src/stage22_bootstrap_ci.py
+ M src/stage23_risk_coverage.py
+ M src/stage6_missing_data_scenarios.py
+ M src/stage7_sensitivity_analysis.py
+ M src/stage9_ood_uncertainty.py
+ M src/sweep_configs.py
+ M src/test_conductance_scale.py
+ M src/test_ratio_accuracy.py
+ M src/test_ratio_sensitivity.py
+ M src/test_state_count_accuracy.py
+ M src/train_mnist.py
+ M src/zero_shot_predictor.py
+?? .venv_ml/
+?? backup_before_exhibition/
+?? checkpoints/
+?? dashboard/app_before_final_integration.py
+?? dashboard/app_before_public_v2.py
+?? dashboard/app_before_publication_integration.py
+?? dashboard/final_public_ui.py
+?? dashboard/final_public_ui_before_html_fix.py
+?? dashboard/publication_evidence.py
+?? dashboard/publication_evidence_before_html_fix.py
+?? dashboard/publication_evidence_before_v2.py
+?? manuscript/
+?? neurosim_backup_20260928/
+?? results/frozen/
+?? results/stage36_audit/
+?? results/stage37_frozen/
+?? results/stage37_model_comparison/
+?? results/stage38_publication/
+?? results/stage39_interpretation/
+?? results/stage40_hardware_finalization/
+?? results/stage41_novelty/
+?? src/stage37C_model_agreement.py
+?? src/stage37D_seed_robustness.py
+?? src/stage37_multimodel_comparison.py
+?? src/stage38_publication_results.py
+?? src/stage40_hardware_finalization.py

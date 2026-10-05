@@ -1,0 +1,10 @@
+{
+  "stage": 23,
+  "name": "Support-gate validation audit",
+  "evaluation_basis": "existing leave-one-study-out results",
+  "gate_rule": "Cost optimization is allowed only when at least two training devices share the held-out conductance mode and the held-out log10 ON/OFF ratio lies inside the same-mode training envelope.",
+  "supported_policy": "VALIDATION_AWARE_COST",
+  "unsupported_policy": "ACCURACY_FIRST_EXTRAPOLATION_FALLBACK",
+  "near_optimal_threshold_pp": 0.5,
+  "important_note": "The gate identifies support for cost-aware optimization; it is not a calibrated probability of correctness."
+}
