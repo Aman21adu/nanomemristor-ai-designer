@@ -1,0 +1,5 @@
+device_id,validated_hardware_points,pareto_points,min_area_mm2,min_latency_us,min_dynamic_energy_uJ,max_energy_efficiency_TOPS_W,max_throughput_TOPS,max_fps
+TaOx_01,8,5,122.935,123.847,53.8574,18.6166,9.94641,8074.47
+TiOx_02_Au,8,5,64.5736,99.1935,23.0877,43.1887,12.4185,10081.3
+TiOx_02_Ni,8,5,79.5625,103.821,34.4292,29.0322,11.865,9631.95
+TiOx_02_Pt,8,5,75.4009,104.705,27.3414,36.4752,11.7648,9550.6
