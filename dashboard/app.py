@@ -9,6 +9,14 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+from final_public_ui import (
+    inject_final_public_style,
+    render_home_hero,
+    render_publication_positioning,
+)
+
+from publication_evidence import render_publication_results_v2
+
 
 # ============================================================
 # PAGE
@@ -20,6 +28,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+inject_final_public_style()
 
 
 # ============================================================
@@ -96,6 +106,18 @@ PAGES = [
     "Research Evidence",
     "Sources & Limitations",
 ]
+
+
+NAV_LABELS = {
+    "Home": "🏠 Home",
+    "Forward Design": "⚡ Quick Device Check",
+    "Custom Device": "🧪 Custom Device",
+    "Reverse Design": "↩ Reverse Design",
+    "Research Targets": "🔬 Research Targets",
+    "Why Nano?": "🧬 Why Nano?",
+    "Research Evidence": "📊 Research & Hardware Evidence",
+    "Sources & Limitations": "📚 Publication & Sources",
+}
 
 MODEL_FEATURE_LABELS = [
     "ON/OFF ratio",
@@ -1687,10 +1709,10 @@ if st.session_state.show_welcome:
             <div class="card-kicker">Quick Start</div>
             <div class="welcome-title">NanoMemristor AI Designer</div>
             <div class="welcome-text">
-                Connect literature-derived memristor behavior to simulated
-                AI-accelerator design.<br><br>
-                Choose a workflow below, or continue to the main dashboard
-                and explore at your own pace.
+                Screen memristor-to-accelerator design choices using
+                evidence-aware cross-device AI.<br><br>
+                <strong>Screen → prioritize → validate.</strong><br><br>
+                Choose a workflow below or enter the main dashboard.
             </div>
         </div>
         """
@@ -1710,7 +1732,7 @@ if st.session_state.show_welcome:
     with c1:
         render_workflow_card(
             "Workflow 1",
-            "Known Memristor → Accelerator",
+            "Quick Device Check",
             (
                 "Choose a literature-derived memristor and receive a "
                 "support-gated accelerator recommendation."
@@ -1813,6 +1835,7 @@ if st.session_state.show_welcome:
 # ============================================================
 
 st.sidebar.markdown("## ⚡ NanoMemristor AI Designer")
+st.sidebar.caption("Research prototype • Screen → prioritize → validate")
 
 if st.sidebar.button(
     "🏠 Quick Start / How to Use",
@@ -1872,7 +1895,7 @@ for nav_page in PAGES:
     is_active = nav_page == st.session_state.current_page
 
     if st.sidebar.button(
-        nav_page,
+        NAV_LABELS.get(nav_page, nav_page),
         key=f"nav_{nav_page}",
         type="primary" if is_active else "secondary",
         use_container_width=True,
@@ -2043,8 +2066,16 @@ render_html(
 # ============================================================
 
 if page == "Home":
+    render_home_hero(
+        device_count=device_count,
+        study_count=study_count,
+        family_count=family_count,
+        total_simulation_rows=total_simulation_rows,
+    )
+
+    st.divider()
     section_header(
-        "What is this project?",
+        "How the research works",
         (
             "The tool links memristor device behavior reported in the literature "
             "to a simulated AI accelerator. It then asks whether knowledge learned "
@@ -2162,14 +2193,16 @@ if page == "Home":
 
 elif page == "Forward Design":
     section_header(
-        "Forward Design",
+        "Quick Device Check",
         (
-            "Start with a memristor device and ask: which accelerator "
-            "configuration should I use?"
+            "Choose a literature-grounded memristor profile and see which "
+            "accelerator configuration the final support-aware workflow "
+            "would prioritize first."
         ),
         (
-            "The final policy combines a study-aware Random-Forest prediction, "
-            "a historical validation penalty and a descriptor-support gate."
+            "The public recommendation uses the final guarded policy. "
+            "The Research & Hardware Evidence page compares four ML models, "
+            "five random seeds and separate NeuroSim hardware evidence."
         ),
         level=2,
     )
@@ -3801,16 +3834,37 @@ elif page == "Why Nano?":
 
 elif page == "Research Evidence":
     section_header(
-        "Research Evidence",
+        "Research & Hardware Evidence",
         (
-            "This page shows how well the recommendation has been tested and "
-            "where the current evidence is still weak."
+            "Final multi-model recommendation results, robustness analysis "
+            "and circuit-level NeuroSim evidence."
         ),
         (
-            "Study-blocked, leave-one-study-out and leave-one-family-out validation "
-            "are separated from uncertainty/OOD diagnostics and proxy analyses."
+            "Frozen publication evidence is shown first. Extended exploratory "
+            "diagnostics remain available in Researcher mode."
         ),
         level=2,
+    )
+
+    render_publication_results_v2(
+        mode=st.session_state.app_mode
+    )
+
+    if st.session_state.app_mode != "Researcher":
+        st.stop()
+
+    st.divider()
+
+    section_header(
+        "Extended research diagnostics",
+        (
+            "Additional validation, provenance, sensitivity, OOD and proxy "
+            "analyses from the research-development pipeline."
+        ),
+        (
+            "These exploratory diagnostics are kept separate from the frozen "
+            "publication-level results above."
+        ),
     )
 
     if st.session_state.app_mode == "Researcher":
@@ -4706,13 +4760,21 @@ elif page == "Research Evidence":
 
 elif page == "Sources & Limitations":
     section_header(
-        "Sources & Scientific Transparency",
+        "Publication, Sources & Scientific Transparency",
         (
-            "See where the selected device data came from and which parts are "
-            "reported, derived, assumed or missing."
+            "Review the research contribution, literature provenance, "
+            "evidence boundaries and limitations behind the public prototype."
+        ),
+        (
+            "Reported, derived, assumed and missing information remain "
+            "explicitly separated."
         ),
         level=2,
     )
+
+    render_publication_positioning()
+
+    st.divider()
 
     t1, t2, t3 = st.columns(3)
     t1.metric("Literature profiles", literature_device_count)
