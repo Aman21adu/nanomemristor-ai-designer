@@ -1,0 +1,32 @@
+
+name: Streamlit App Activity
+
+on:
+  schedule:
+    # Every 8 hours, UTC
+    - cron: '17 */8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: streamlit-activity
+  cancel-in-progress: false
+
+jobs:
+  reset-inactivity-timer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out deployed main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Push an empty commit (no file changes)
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit --allow-empty -m 'chore: reset Streamlit inactivity countdown'
+          git push origin HEAD:main
